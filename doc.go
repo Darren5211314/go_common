@@ -54,10 +54,10 @@
 // 英文命名空间不加 D：AES、DES、DES3、SM4、Hash、HMAC、CRC、RSA、JSON、QR、IP、Proxy、Thread、HTTP、JS、Sync、Codec。
 // JSON / QR / IP / Proxy / Thread / HTTP / JS / Sync / Codec 的方法仍为中文加 D。
 // 模式写进方法名，例如 AES.EncryptCBC / EncryptECB / EncryptGCM。
-// 密钥、IV/nonce、密文、摘要、HMAC 均为十六进制字符串；明文为普通 string。
-// CBC/ECB 使用 PKCS7；GCM 返回「密文||tag」hex，nonce 单独参数传入。
+// 密钥、IV/nonce、data、摘要、HMAC 均为十六进制字符串；明文为普通 string。
+// CBC/ECB 使用 PKCS7；GCM 返回「data||tag」hex，nonce 单独参数传入。
 // 国密：Hash.SM3；SM4 固定 128-bit 密钥，支持 CBC/ECB/GCM（依赖 emmansun/gmsm）。
-// Hash/CRC 只返回值；加解密、HMAC、RSA、JSON.D设置*、QR、IP、Proxy、Thread 投递、HTTP.D发送 等返回 (结果, error)。
+// Hash/CRC 只返回值；加解密、HMAC、RSA、JSON.D设置*、QR、IP、Proxy、Thread 投递、HTTP.Send 等返回 (结果, error)。
 //
 //	摘要 := darren.Hash.MD5("abc")
 //	本机 := darren.IP.D取本机IP()
@@ -108,7 +108,7 @@
 // # Proxy 约定
 //
 // Proxy.D新建 得到有状态池；D设置代理链接/容量/是否验证/验证超时/存活时间/验证线程数/获取间隔/验证地址/默认协议；
-// D启动 后 D获取代理(等待秒)（-1 无限等）；D取统计；D关闭。
+// D启动 后 GetProxy(waitTime)（-1 无限等，>=0 超时秒）；D取统计；D关闭。
 // 过期仅在获取时剔除；仅在可用数低于容量时按获取间隔补充。支持 http/https/socks5。
 //
 // # Thread 约定
@@ -119,14 +119,14 @@
 //
 // # HTTP 约定
 //
-// HTTP.D新建 得到客户端；可选 D设置代理池 / D设置默认超时|重试。
-// D发送(方法, URL, data, cookie, 头, 禁止重定向, 使用代理, 代理, 最大重试, 自动合并Cookie, 超时秒)；
-// 使用代理=false 强制直连；=true 且 代理非空用手动（重试不换 IP）；=true 且代理空则粘性/池/直连。
-// 超时/重试 <=0 用客户端默认（超时 10s、重试 3）；最大重试=3 表示最多 3 次尝试。
-// data：nil/空串无 body；[]byte/string 原样；map[string]string 为表单。
-// 会话 D新建会话：Cookie 持久；粘性只记录池代理，手动成功不写粘性；池/粘性失败重试换 IP。
-// Cookie 入参支持 a=1; b=2 与 a=1&b=2；值中勿含未编码的 &（会被当作分隔符拆开）。
-// 仅超时/连接/代理/TLS 及 502/503/504 可重试。
+// 日常：HTTP.Send(方法, URL) 或 HTTP.Send(方法, URL, D发送选项{...})，无需 D新建。
+// 命名空间 D设置代理池 / D设置默认超时|重试 / D新建会话 作用于默认客户端；多配置用 HTTP.D新建()。
+// D发送选项：Data、Cookie、Headers、NoRedirect、UseProxy、Proxy、MaxRetries、Timeout、CloseMergeCookie。
+// UseProxy=false 直连；=true 且 Proxy 非空用手动；=true 且空则粘性/池/直连。
+// Timeout/MaxRetries <=0 用默认（10s / 3 次）；CloseMergeCookie 默认 false（合并）。
+// Data：nil/空串无 body；[]byte/string 原样；map[string]string 为表单。
+// Cookie 支持 a=1; b=2 与 a=1&b=2；值中勿含未编码的 &。
+// 直连复用 KeepAlive；代理禁用 KeepAlive。仅超时/连接/代理/TLS 及 502/503/504 可重试。
 //
 // # 扩展方式
 //

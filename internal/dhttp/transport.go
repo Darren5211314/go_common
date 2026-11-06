@@ -14,14 +14,14 @@ import (
 )
 
 var (
-	直连传输一次 sync.Once
-	直连传输   *http.Transport
+	directOnce sync.Once
+	directTripper   *http.Transport
 )
 
 // 取直连传输 返回可 KeepAlive 复用的共享 Transport（无代理）。
-func 取直连传输() *http.Transport {
-	直连传输一次.Do(func() {
-		直连传输 = &http.Transport{
+func directTransport() *http.Transport {
+	directOnce.Do(func() {
+		directTripper = &http.Transport{
 			Proxy:                 nil,
 			DisableKeepAlives:     false,
 			MaxIdleConns:          100,
@@ -31,77 +31,77 @@ func 取直连传输() *http.Transport {
 			ExpectContinueTimeout: 1 * time.Second,
 		}
 	})
-	return 直连传输
+	return directTripper
 }
 
 // 新建代理传输 为指定代理新建传输（禁用 KeepAlive，避免串代理粘连）。
-func 新建代理传输(代理URL string) (*http.Transport, error) {
-	传输 := &http.Transport{
+func newProxyTransport(proxyURL string) (*http.Transport, error) {
+	transport := &http.Transport{
 		DisableKeepAlives: true,
 		Proxy:             nil,
 	}
-	代理URL = strings.TrimSpace(代理URL)
-	if 代理URL == "" {
+	proxyURL = strings.TrimSpace(proxyURL)
+	if proxyURL == "" {
 		return nil, fmt.Errorf("代理URL为空")
 	}
-	u, 错误 := url.Parse(代理URL)
-	if 错误 != nil {
-		return nil, 错误
+	u, err := url.Parse(proxyURL)
+	if err != nil {
+		return nil, err
 	}
 	switch strings.ToLower(u.Scheme) {
 	case "http", "https":
-		传输.Proxy = http.ProxyURL(u)
+		transport.Proxy = http.ProxyURL(u)
 	case "socks5", "socks5h":
-		拨号, 错误 := 新建SOCKS5拨号(u)
-		if 错误 != nil {
-			return nil, 错误
+		dial, err := newSOCKS5Dialer(u)
+		if err != nil {
+			return nil, err
 		}
-		传输.DialContext = 包装SOCKS5拨号(拨号)
+		transport.DialContext = wrapSOCKS5Dialer(dial)
 	default:
 		return nil, fmt.Errorf("不支持的代理协议: %s", u.Scheme)
 	}
-	return 传输, nil
+	return transport, nil
 }
 
-func 包装SOCKS5拨号(拨号 xproxy.Dialer) func(ctx context.Context, network, address string) (net.Conn, error) {
+func wrapSOCKS5Dialer(dial xproxy.Dialer) func(ctx context.Context, network, address string) (net.Conn, error) {
 	return func(ctx context.Context, network, address string) (net.Conn, error) {
-		类型结果 := make(chan struct {
-			连接 net.Conn
-			错  error
+		typedResult := make(chan struct {
+			conn net.Conn
+			e  error
 		}, 1)
 		go func() {
-			连接, 错 := 拨号.Dial(network, address)
-			类型结果 <- struct {
-				连接 net.Conn
-				错  error
-			}{连接, 错}
+			conn, e := dial.Dial(network, address)
+			typedResult <- struct {
+				conn net.Conn
+				e  error
+			}{conn, e}
 		}()
 		select {
 		case <-ctx.Done():
 			go func() {
-				结果 := <-类型结果
-				if 结果.连接 != nil {
-					_ = 结果.连接.Close()
+				result := <-typedResult
+				if result.conn != nil {
+					_ = result.conn.Close()
 				}
 			}()
 			return nil, ctx.Err()
-		case 结果 := <-类型结果:
+		case result := <-typedResult:
 			if err := ctx.Err(); err != nil {
-				if 结果.连接 != nil {
-					_ = 结果.连接.Close()
+				if result.conn != nil {
+					_ = result.conn.Close()
 				}
 				return nil, err
 			}
-			return 结果.连接, 结果.错
+			return result.conn, result.e
 		}
 	}
 }
 
-func 新建SOCKS5拨号(u *url.URL) (xproxy.Dialer, error) {
-	var 认证 *xproxy.Auth
+func newSOCKS5Dialer(u *url.URL) (xproxy.Dialer, error) {
+	var auth *xproxy.Auth
 	if u.User != nil {
-		密码, _ := u.User.Password()
-		认证 = &xproxy.Auth{User: u.User.Username(), Password: 密码}
+		password, _ := u.User.Password()
+		auth = &xproxy.Auth{User: u.User.Username(), Password: password}
 	}
-	return xproxy.SOCKS5("tcp", u.Host, 认证, xproxy.Direct)
+	return xproxy.SOCKS5("tcp", u.Host, auth, xproxy.Direct)
 }

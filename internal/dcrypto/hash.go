@@ -9,27 +9,27 @@ import (
 	"github.com/emmansun/gmsm/sm3"
 )
 
-func 摘要MD5(数据 string) string {
-	和 := md5.Sum([]byte(数据))
-	return 编码十六进制(和[:])
+func MD5(data string) string {
+	sum := md5.Sum([]byte(data))
+	return encodeHex(sum[:])
 }
 
-func 摘要SHA1(数据 string) string {
-	和 := sha1.Sum([]byte(数据))
-	return 编码十六进制(和[:])
+func SHA1(data string) string {
+	sum := sha1.Sum([]byte(data))
+	return encodeHex(sum[:])
 }
 
-func 摘要SHA256(数据 string) string {
-	和 := sha256.Sum256([]byte(数据))
-	return 编码十六进制(和[:])
+func SHA256(data string) string {
+	sum := sha256.Sum256([]byte(data))
+	return encodeHex(sum[:])
 }
 
-func 摘要SHA512(数据 string) string {
-	和 := sha512.Sum512([]byte(数据))
-	return 编码十六进制(和[:])
+func SHA512(data string) string {
+	sum := sha512.Sum512([]byte(data))
+	return encodeHex(sum[:])
 }
 
-func 摘要SM3(数据 string) string {
-	和 := sm3.Sum([]byte(数据))
-	return 编码十六进制(和[:])
+func SM3(data string) string {
+	sum := sm3.Sum([]byte(data))
+	return encodeHex(sum[:])
 }

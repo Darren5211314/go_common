@@ -4,148 +4,148 @@ import (
 	"github.com/emmansun/gmsm/sm4"
 )
 
-func 解析SM4密钥(密钥hex string) ([]byte, error) {
-	密钥, 错误 := 解码十六进制(密钥hex)
-	if 错误 != nil {
-		return nil, 错误
+func parseSM4Key(keyHex string) ([]byte, error) {
+	key, err := decodeHex(keyHex)
+	if err != nil {
+		return nil, err
 	}
-	if len(密钥) != 16 {
-		return nil, 错误密钥长度
+	if len(key) != 16 {
+		return nil, errKeyLen
 	}
-	return 密钥, nil
+	return key, nil
 }
 
 // SM4EncryptCBC SM4-CBC 加密，返回密文十六进制。
-func SM4EncryptCBC(明文, 密钥hex, IVhex string) (string, error) {
-	密钥, 错误 := 解析SM4密钥(密钥hex)
-	if 错误 != nil {
-		return "", 错误
+func SM4EncryptCBC(data, keyHex, IVhex string) (string, error) {
+	key, err := parseSM4Key(keyHex)
+	if err != nil {
+		return "", err
 	}
-	IV, 错误 := 解码十六进制(IVhex)
-	if 错误 != nil {
-		return "", 错误
+	IV, err := decodeHex(IVhex)
+	if err != nil {
+		return "", err
 	}
-	块, 错误 := sm4.NewCipher(密钥)
-	if 错误 != nil {
-		return "", 错误
+	block, err := sm4.NewCipher(key)
+	if err != nil {
+		return "", err
 	}
-	密文, 错误 := 加密CBC(块, []byte(明文), IV)
-	if 错误 != nil {
-		return "", 错误
+	out, err := encryptCBC(block, []byte(data), IV)
+	if err != nil {
+		return "", err
 	}
-	return 编码十六进制(密文), nil
+	return encodeHex(out), nil
 }
 
 // SM4DecryptCBC SM4-CBC 解密，密文为十六进制。
-func SM4DecryptCBC(密文hex, 密钥hex, IVhex string) (string, error) {
-	密钥, 错误 := 解析SM4密钥(密钥hex)
-	if 错误 != nil {
-		return "", 错误
+func SM4DecryptCBC(data, keyHex, IVhex string) (string, error) {
+	key, err := parseSM4Key(keyHex)
+	if err != nil {
+		return "", err
 	}
-	IV, 错误 := 解码十六进制(IVhex)
-	if 错误 != nil {
-		return "", 错误
+	IV, err := decodeHex(IVhex)
+	if err != nil {
+		return "", err
 	}
-	密文, 错误 := 解码十六进制(密文hex)
-	if 错误 != nil {
-		return "", 错误
+	raw, err := decodeHex(data)
+	if err != nil {
+		return "", err
 	}
-	块, 错误 := sm4.NewCipher(密钥)
-	if 错误 != nil {
-		return "", 错误
+	block, err := sm4.NewCipher(key)
+	if err != nil {
+		return "", err
 	}
-	明文, 错误 := 解密CBC(块, 密文, IV)
-	if 错误 != nil {
-		return "", 错误
+	out, err := decryptCBC(block, raw, IV)
+	if err != nil {
+		return "", err
 	}
-	return string(明文), nil
+	return string(out), nil
 }
 
 // SM4EncryptECB SM4-ECB 加密，返回密文十六进制。
-func SM4EncryptECB(明文, 密钥hex string) (string, error) {
-	密钥, 错误 := 解析SM4密钥(密钥hex)
-	if 错误 != nil {
-		return "", 错误
+func SM4EncryptECB(data, keyHex string) (string, error) {
+	key, err := parseSM4Key(keyHex)
+	if err != nil {
+		return "", err
 	}
-	块, 错误 := sm4.NewCipher(密钥)
-	if 错误 != nil {
-		return "", 错误
+	block, err := sm4.NewCipher(key)
+	if err != nil {
+		return "", err
 	}
-	密文, 错误 := 加密ECB(块, []byte(明文))
-	if 错误 != nil {
-		return "", 错误
+	out, err := encryptECB(block, []byte(data))
+	if err != nil {
+		return "", err
 	}
-	return 编码十六进制(密文), nil
+	return encodeHex(out), nil
 }
 
 // SM4DecryptECB SM4-ECB 解密，密文为十六进制。
-func SM4DecryptECB(密文hex, 密钥hex string) (string, error) {
-	密钥, 错误 := 解析SM4密钥(密钥hex)
-	if 错误 != nil {
-		return "", 错误
+func SM4DecryptECB(data, keyHex string) (string, error) {
+	key, err := parseSM4Key(keyHex)
+	if err != nil {
+		return "", err
 	}
-	密文, 错误 := 解码十六进制(密文hex)
-	if 错误 != nil {
-		return "", 错误
+	raw, err := decodeHex(data)
+	if err != nil {
+		return "", err
 	}
-	块, 错误 := sm4.NewCipher(密钥)
-	if 错误 != nil {
-		return "", 错误
+	block, err := sm4.NewCipher(key)
+	if err != nil {
+		return "", err
 	}
-	明文, 错误 := 解密ECB(块, 密文)
-	if 错误 != nil {
-		return "", 错误
+	out, err := decryptECB(block, raw)
+	if err != nil {
+		return "", err
 	}
-	return string(明文), nil
+	return string(out), nil
 }
 
-// SM4EncryptGCM SM4-GCM 加密；nonce 单独传入；返回「密文||tag」十六进制。
-func SM4EncryptGCM(明文, 密钥hex, NonceHex string) (string, error) {
-	密钥, 错误 := 解析SM4密钥(密钥hex)
-	if 错误 != nil {
-		return "", 错误
+// SM4EncryptGCM SM4-GCM 加密；nonce 单独传入；返回「data||tag」十六进制。
+func SM4EncryptGCM(data, keyHex, NonceHex string) (string, error) {
+	key, err := parseSM4Key(keyHex)
+	if err != nil {
+		return "", err
 	}
-	nonce, 错误 := 解码十六进制(NonceHex)
-	if 错误 != nil {
-		return "", 错误
+	nonce, err := decodeHex(NonceHex)
+	if err != nil {
+		return "", err
 	}
-	块, 错误 := sm4.NewCipher(密钥)
-	if 错误 != nil {
-		return "", 错误
+	block, err := sm4.NewCipher(key)
+	if err != nil {
+		return "", err
 	}
-	aead, 错误 := 新建GCM(块, len(nonce))
-	if 错误 != nil {
-		return "", 错误
+	aead, err := newGCM(block, len(nonce))
+	if err != nil {
+		return "", err
 	}
-	密封 := aead.Seal(nil, nonce, []byte(明文), nil)
-	return 编码十六进制(密封), nil
+	sealed := aead.Seal(nil, nonce, []byte(data), nil)
+	return encodeHex(sealed), nil
 }
 
-// SM4DecryptGCM SM4-GCM 解密；密文hex 为「密文||tag」。
-func SM4DecryptGCM(密文hex, 密钥hex, NonceHex string) (string, error) {
-	密钥, 错误 := 解析SM4密钥(密钥hex)
-	if 错误 != nil {
-		return "", 错误
+// SM4DecryptGCM SM4-GCM 解密；data 为「data||tag」。
+func SM4DecryptGCM(data, keyHex, NonceHex string) (string, error) {
+	key, err := parseSM4Key(keyHex)
+	if err != nil {
+		return "", err
 	}
-	nonce, 错误 := 解码十六进制(NonceHex)
-	if 错误 != nil {
-		return "", 错误
+	nonce, err := decodeHex(NonceHex)
+	if err != nil {
+		return "", err
 	}
-	密封, 错误 := 解码十六进制(密文hex)
-	if 错误 != nil {
-		return "", 错误
+	sealed, err := decodeHex(data)
+	if err != nil {
+		return "", err
 	}
-	块, 错误 := sm4.NewCipher(密钥)
-	if 错误 != nil {
-		return "", 错误
+	block, err := sm4.NewCipher(key)
+	if err != nil {
+		return "", err
 	}
-	aead, 错误 := 新建GCM(块, len(nonce))
-	if 错误 != nil {
-		return "", 错误
+	aead, err := newGCM(block, len(nonce))
+	if err != nil {
+		return "", err
 	}
-	明文, 错误 := aead.Open(nil, nonce, 密封, nil)
-	if 错误 != nil {
-		return "", 错误
+	out, err := aead.Open(nil, nonce, sealed, nil)
+	if err != nil {
+		return "", err
 	}
-	return string(明文), nil
+	return string(out), nil
 }

@@ -8,90 +8,90 @@ import (
 	"rogchap.com/v8go"
 )
 
-type v8后端 struct {
-	隔离  *v8go.Isolate
-	上下文 *v8go.Context
+type v8Backend struct {
+	isolate  *v8go.Isolate
+	ctx *v8go.Context
 }
 
-func 新建V8() (后端, error) {
-	隔离 := v8go.NewIsolate()
-	上下文 := v8go.NewContext(隔离)
-	return &v8后端{隔离: 隔离, 上下文: 上下文}, nil
+func newV8() (backend, error) {
+	isolate := v8go.NewIsolate()
+	ctx := v8go.NewContext(isolate)
+	return &v8Backend{isolate: isolate, ctx: ctx}, nil
 }
 
-func (v *v8后端) 执行(代码 string) (string, error) {
-	值, 错误 := v.上下文.RunScript(代码, "djs.js")
-	if 错误 != nil {
-		return "", 错误
+func (v *v8Backend) eval(code string) (string, error) {
+	value, err := v.ctx.RunScript(code, "djs.js")
+	if err != nil {
+		return "", err
 	}
-	if 值 == nil || 值.IsUndefined() || 值.IsNull() {
+	if value == nil || value.IsUndefined() || value.IsNull() {
 		return "", nil
 	}
-	return 值.String(), nil
+	return value.String(), nil
 }
 
-func (v *v8后端) 设置变量(名 string, 值 any) error {
-	全局 := v.上下文.Global()
-	js值, 错误 := 转V8值(v.隔离, 值)
-	if 错误 != nil {
-		return 错误
+func (v *v8Backend) setVar(name string, value any) error {
+	global := v.ctx.Global()
+	jsVal, err := toV8Value(v.isolate, value)
+	if err != nil {
+		return err
 	}
-	return 全局.Set(名, js值)
+	return global.Set(name, jsVal)
 }
 
-func (v *v8后端) 取原始(名 string) (any, bool, error) {
-	全局 := v.上下文.Global()
-	值, 错误 := 全局.Get(名)
-	if 错误 != nil {
-		return nil, false, 错误
+func (v *v8Backend) getRaw(name string) (any, bool, error) {
+	global := v.ctx.Global()
+	value, err := global.Get(name)
+	if err != nil {
+		return nil, false, err
 	}
-	if 值 == nil || 值.IsUndefined() {
+	if value == nil || value.IsUndefined() {
 		return nil, false, nil
 	}
-	if 值.IsBoolean() {
-		return 值.Boolean(), true, nil
+	if value.IsBoolean() {
+		return value.Boolean(), true, nil
 	}
-	if 值.IsNumber() {
-		n := 值.Number()
+	if value.IsNumber() {
+		n := value.Number()
 		if n == float64(int64(n)) {
 			return int64(n), true, nil
 		}
 		return n, true, nil
 	}
-	if 值.IsString() {
-		return 值.String(), true, nil
+	if value.IsString() {
+		return value.String(), true, nil
 	}
-	if 值.IsNull() {
+	if value.IsNull() {
 		return nil, true, nil
 	}
-	return 值.String(), true, nil
+	return value.String(), true, nil
 }
 
-func (v *v8后端) 关闭() {
-	if v.上下文 != nil {
-		v.上下文.Close()
-		v.上下文 = nil
+func (v *v8Backend) close() {
+	if v.ctx != nil {
+		v.ctx.Close()
+		v.ctx = nil
 	}
-	if v.隔离 != nil {
-		v.隔离.Dispose()
-		v.隔离 = nil
+	if v.isolate != nil {
+		v.isolate.Dispose()
+		v.isolate = nil
 	}
 }
 
-func 转V8值(隔离 *v8go.Isolate, 值 any) (*v8go.Value, error) {
-	if 值 == nil {
-		return v8go.Null(隔离), nil
+func toV8Value(isolate *v8go.Isolate, value any) (*v8go.Value, error) {
+	if value == nil {
+		return v8go.Null(isolate), nil
 	}
-	switch x := 值.(type) {
+	switch x := value.(type) {
 	case string:
-		return v8go.NewValue(隔离, x)
+		return v8go.NewValue(isolate, x)
 	case bool:
-		return v8go.NewValue(隔离, x)
+		return v8go.NewValue(isolate, x)
 	case int64:
-		return v8go.NewValue(隔离, x)
+		return v8go.NewValue(isolate, x)
 	case float64:
-		return v8go.NewValue(隔离, x)
+		return v8go.NewValue(isolate, x)
 	default:
-		return v8go.NewValue(隔离, fmt.Sprint(x))
+		return v8go.NewValue(isolate, fmt.Sprint(x))
 	}
 }

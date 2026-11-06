@@ -7,9 +7,9 @@ import (
 	"time"
 )
 
-const 毫秒阈值 = int64(1_000_000_000_000)
+const msThreshold = int64(1_000_000_000_000)
 
-var 解析候选布局 = []string{
+var tryLayouts = []string{
 	time.RFC3339Nano,
 	time.RFC3339,
 	"2006-01-02 15:04:05.000000000",
@@ -30,30 +30,30 @@ var 解析候选布局 = []string{
 	"15:04",
 }
 
-func 绝对值(值 int64) int64 {
-	if 值 < 0 {
-		return -值
+func abs(value int64) int64 {
+	if value < 0 {
+		return -value
 	}
-	return 值
+	return value
 }
 
-func 时间戳到时间(戳 int64) time.Time {
-	if 绝对值(戳) >= 毫秒阈值 {
-		return time.UnixMilli(戳).Local()
+func timestampToTime(ts int64) time.Time {
+	if abs(ts) >= msThreshold {
+		return time.UnixMilli(ts).Local()
 	}
-	return time.Unix(戳, 0).Local()
+	return time.Unix(ts, 0).Local()
 }
 
 // 通配符转布局 将 yyyy-mm-dd hh:mm:ss 等通配符转为内部时间布局。
-func 通配符转布局(格式 string) string {
-	if 格式 == "" {
-		return 格式
+func patternToLayout(format string) string {
+	if format == "" {
+		return format
 	}
 
-	结果 := 格式
-	短语 := []struct {
-		通配符 string
-		布局  string
+	result := format
+	phrase := []struct {
+		pattern string
+		layout  string
 	}{
 		{"yyyy-mm-dd hh:mm:ss", "2006-01-02 15:04:05"},
 		{"yyyy/mm/dd hh:mm:ss", "2006/01/02 15:04:05"},
@@ -74,14 +74,14 @@ func 通配符转布局(格式 string) string {
 		{"hh:mm", "15:04"},
 		{"HH:mm", "15:04"},
 	}
-	for _, 项 := range 短语 {
-		结果 = strings.ReplaceAll(结果, 项.通配符, 项.布局)
+	for _, item := range phrase {
+		result = strings.ReplaceAll(result, item.pattern, item.layout)
 	}
 
 	// 标记替换：月优先于分（mm月 / MM）；短语未覆盖时剩余 mm 视为分钟。
-	标记 := []struct {
-		通配符 string
-		布局  string
+	flag := []struct {
+		pattern string
+		layout  string
 	}{
 		{"yyyy", "2006"},
 		{"YYYY", "2006"},
@@ -98,22 +98,22 @@ func 通配符转布局(格式 string) string {
 		{"ss", "05"},
 		{"SS", "05"},
 	}
-	for _, 项 := range 标记 {
-		结果 = strings.ReplaceAll(结果, 项.通配符, 项.布局)
+	for _, item := range flag {
+		result = strings.ReplaceAll(result, item.pattern, item.layout)
 	}
-	return 结果
+	return result
 }
 
 // 解析时间文本 自动尝试常见时间格式，成功返回本地时区时间。
-func 解析时间文本(文本 string) (time.Time, bool) {
-	文本 = strings.TrimSpace(文本)
-	if 文本 == "" {
+func parseTimeText(text string) (time.Time, bool) {
+	text = strings.TrimSpace(text)
+	if text == "" {
 		return time.Time{}, false
 	}
-	for _, 布局 := range 解析候选布局 {
-		时刻, 错误 := time.ParseInLocation(布局, 文本, time.Local)
-		if 错误 == nil {
-			return 时刻, true
+	for _, layout := range tryLayouts {
+		t, err := time.ParseInLocation(layout, text, time.Local)
+		if err == nil {
+			return t, true
 		}
 	}
 	return time.Time{}, false
@@ -121,8 +121,8 @@ func 解析时间文本(文本 string) (time.Time, bool) {
 
 // D取现行时间戳 取十位为 true 返回秒级（约 10 位），为 false 返回毫秒级（约 13 位）。
 // 调用时传 false 即「默认」13 位。
-func 取现行时间戳(取十位 bool) int64 {
-	if 取十位 {
+func nowTimestamp(tenDigits bool) int64 {
+	if tenDigits {
 		return time.Now().Unix()
 	}
 	return time.Now().UnixMilli()
@@ -131,43 +131,43 @@ func 取现行时间戳(取十位 bool) int64 {
 // D时间戳转时间 将时间戳按本地时区格式化为文本。
 // 自动识别：绝对值大于等于 1e12 按毫秒，否则按秒。
 // 格式使用通配符，例如 yyyy-mm-dd hh:mm:ss。
-func 时间戳转时间(戳 int64, 格式 string) string {
-	return 时间戳到时间(戳).Format(通配符转布局(格式))
+func timestampFormat(ts int64, format string) string {
+	return timestampToTime(ts).Format(patternToLayout(format))
 }
 
 // D时间转时间戳 自动识别时间文本格式并转为时间戳。
 // 取十位为 true 返回秒，为 false 返回毫秒；解析失败返回 0。
-func 时间转时间戳(时间文本 string, 取十位 bool) int64 {
-	时刻, 成功 := 解析时间文本(时间文本)
-	if !成功 {
+func timeToTimestamp(timeText string, tenDigits bool) int64 {
+	t, ok := parseTimeText(timeText)
+	if !ok {
 		return 0
 	}
-	if 取十位 {
-		return 时刻.Unix()
+	if tenDigits {
+		return t.Unix()
 	}
-	return 时刻.UnixMilli()
+	return t.UnixMilli()
 }
 
 // D时间格式化 将时间文本格式化为目标通配符格式。
 // 输入格式自动识别；时间文本为空时使用现行时间；解析失败返回空字符串。
-func 时间格式化(时间文本, 目标格式 string) string {
-	var 时刻 time.Time
-	if strings.TrimSpace(时间文本) == "" {
-		时刻 = time.Now()
+func formatTime(timeText, targetLayout string) string {
+	var t time.Time
+	if strings.TrimSpace(timeText) == "" {
+		t = time.Now()
 	} else {
-		解析结果, 成功 := 解析时间文本(时间文本)
-		if !成功 {
+		parseResult, ok := parseTimeText(timeText)
+		if !ok {
 			return ""
 		}
-		时刻 = 解析结果
+		t = parseResult
 	}
-	return 时刻.Format(通配符转布局(目标格式))
+	return t.Format(patternToLayout(targetLayout))
 }
 
 // D延时 阻塞当前协程指定毫秒；毫秒 <= 0 时立即返回。
-func 延时(毫秒 int) {
-	if 毫秒 <= 0 {
+func sleepMs(ms int) {
+	if ms <= 0 {
 		return
 	}
-	time.Sleep(time.Duration(毫秒) * time.Millisecond)
+	time.Sleep(time.Duration(ms) * time.Millisecond)
 }

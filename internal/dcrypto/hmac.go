@@ -8,25 +8,25 @@ import (
 	"hash"
 )
 
-func hmacHex(数据, 密钥 string, 新建 func() hash.Hash) (string, error) {
-	mac := hmac.New(新建, []byte(密钥))
-	if _, 错误 := mac.Write([]byte(数据)); 错误 != nil {
-		return "", 错误
+func hmacHex(data, key string, newFn func() hash.Hash) (string, error) {
+	mac := hmac.New(newFn, []byte(key))
+	if _, err := mac.Write([]byte(data)); err != nil {
+		return "", err
 	}
-	return 编码十六进制(mac.Sum(nil)), nil
+	return encodeHex(mac.Sum(nil)), nil
 }
 
 // HMACSHA1 计算 HMAC-SHA1，返回十六进制。
-func HMACSHA1(数据, 密钥 string) (string, error) {
-	return hmacHex(数据, 密钥, sha1.New)
+func HMACSHA1(data, key string) (string, error) {
+	return hmacHex(data, key, sha1.New)
 }
 
 // HMACSHA256 计算 HMAC-SHA256，返回十六进制。
-func HMACSHA256(数据, 密钥 string) (string, error) {
-	return hmacHex(数据, 密钥, sha256.New)
+func HMACSHA256(data, key string) (string, error) {
+	return hmacHex(data, key, sha256.New)
 }
 
 // HMACSHA512 计算 HMAC-SHA512，返回十六进制。
-func HMACSHA512(数据, 密钥 string) (string, error) {
-	return hmacHex(数据, 密钥, sha512.New)
+func HMACSHA512(data, key string) (string, error) {
+	return hmacHex(data, key, sha512.New)
 }

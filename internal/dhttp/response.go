@@ -7,98 +7,98 @@ import (
 
 // D响应 HTTP 响应封装。
 type D响应 struct {
-	状态码   int
-	正文     []byte
-	重定向地址 string
-	返回Cookie string
-	全部Cookie string
-	协议头   http.Header
-	使用代理  string
-	耗时毫秒  int64
+	statusCode   int
+	body     []byte
+	redirectURL string
+	setCookie string
+	allCookie string
+	headers   http.Header
+	useProxy  string
+	elapsedMs  int64
 }
 
 func (r *D响应) D取状态码() int {
 	if r == nil {
 		return 0
 	}
-	return r.状态码
+	return r.statusCode
 }
 
 func (r *D响应) D取正文() string {
 	if r == nil {
 		return ""
 	}
-	return string(r.正文)
+	return string(r.body)
 }
 
 func (r *D响应) D取字节() []byte {
 	if r == nil {
 		return nil
 	}
-	return r.正文
+	return r.body
 }
 
 func (r *D响应) D取重定向地址() string {
 	if r == nil {
 		return ""
 	}
-	return r.重定向地址
+	return r.redirectURL
 }
 
 func (r *D响应) D取返回Cookie() string {
 	if r == nil {
 		return ""
 	}
-	return r.返回Cookie
+	return r.setCookie
 }
 
 func (r *D响应) D取Cookie() string {
 	if r == nil {
 		return ""
 	}
-	return r.全部Cookie
+	return r.allCookie
 }
 
 func (r *D响应) D取返回协议头() map[string][]string {
-	if r == nil || r.协议头 == nil {
+	if r == nil || r.headers == nil {
 		return map[string][]string{}
 	}
-	结果 := make(map[string][]string, len(r.协议头))
-	for 键, 值 := range r.协议头 {
-		复制 := append([]string(nil), 值...)
-		结果[键] = 复制
+	result := make(map[string][]string, len(r.headers))
+	for k, value := range r.headers {
+		clone := append([]string(nil), value...)
+		result[k] = clone
 	}
-	return 结果
+	return result
 }
 
-func (r *D响应) D取协议头值(键 string) string {
-	if r == nil || r.协议头 == nil {
+func (r *D响应) D取协议头值(k string) string {
+	if r == nil || r.headers == nil {
 		return ""
 	}
-	值列表 := r.协议头.Values(键)
-	if len(值列表) == 0 {
+	values := r.headers.Values(k)
+	if len(values) == 0 {
 		// 兼容大小写：遍历
-		键小写 := strings.ToLower(键)
-		for 现键, 现值 := range r.协议头 {
-			if strings.ToLower(现键) == 键小写 {
-				return strings.Join(现值, ", ")
+		keyLower := strings.ToLower(k)
+		for curKey, cur := range r.headers {
+			if strings.ToLower(curKey) == keyLower {
+				return strings.Join(cur, ", ")
 			}
 		}
 		return ""
 	}
-	return strings.Join(值列表, ", ")
+	return strings.Join(values, ", ")
 }
 
 func (r *D响应) D取使用代理() string {
 	if r == nil {
 		return ""
 	}
-	return r.使用代理
+	return r.useProxy
 }
 
 func (r *D响应) D取耗时() int64 {
 	if r == nil {
 		return 0
 	}
-	return r.耗时毫秒
+	return r.elapsedMs
 }

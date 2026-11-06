@@ -4,48 +4,48 @@ import (
 	"crypto/cipher"
 )
 
-func 加密CBC(块 cipher.Block, 明文 []byte, IV []byte) ([]byte, error) {
-	块大小 := 块.BlockSize()
-	if len(IV) != 块大小 {
-		return nil, 错误IV长度
+func encryptCBC(block cipher.Block, data []byte, IV []byte) ([]byte, error) {
+	blockSize := block.BlockSize()
+	if len(IV) != blockSize {
+		return nil, errIVLen
 	}
-	填充后 := PKCS7填充(明文, 块大小)
-	密文 := make([]byte, len(填充后))
-	cipher.NewCBCEncrypter(块, IV).CryptBlocks(密文, 填充后)
-	return 密文, nil
+	padded := pkcs7Pad(data, blockSize)
+	out := make([]byte, len(padded))
+	cipher.NewCBCEncrypter(block, IV).CryptBlocks(out, padded)
+	return out, nil
 }
 
-func 解密CBC(块 cipher.Block, 密文 []byte, IV []byte) ([]byte, error) {
-	块大小 := 块.BlockSize()
-	if len(IV) != 块大小 {
-		return nil, 错误IV长度
+func decryptCBC(block cipher.Block, data []byte, IV []byte) ([]byte, error) {
+	blockSize := block.BlockSize()
+	if len(IV) != blockSize {
+		return nil, errIVLen
 	}
-	if len(密文) == 0 || len(密文)%块大小 != 0 {
-		return nil, 错误密文
+	if len(data) == 0 || len(data)%blockSize != 0 {
+		return nil, errCiphertext
 	}
-	明文 := make([]byte, len(密文))
-	cipher.NewCBCDecrypter(块, IV).CryptBlocks(明文, 密文)
-	return PKCS7去填充(明文, 块大小)
+	out := make([]byte, len(data))
+	cipher.NewCBCDecrypter(block, IV).CryptBlocks(out, data)
+	return pkcs7Unpad(out, blockSize)
 }
 
-func 加密ECB(块 cipher.Block, 明文 []byte) ([]byte, error) {
-	块大小 := 块.BlockSize()
-	填充后 := PKCS7填充(明文, 块大小)
-	密文 := make([]byte, len(填充后))
-	for 偏移 := 0; 偏移 < len(填充后); 偏移 += 块大小 {
-		块.Encrypt(密文[偏移:偏移+块大小], 填充后[偏移:偏移+块大小])
+func encryptECB(block cipher.Block, data []byte) ([]byte, error) {
+	blockSize := block.BlockSize()
+	padded := pkcs7Pad(data, blockSize)
+	out := make([]byte, len(padded))
+	for offset := 0; offset < len(padded); offset += blockSize {
+		block.Encrypt(out[offset:offset+blockSize], padded[offset:offset+blockSize])
 	}
-	return 密文, nil
+	return out, nil
 }
 
-func 解密ECB(块 cipher.Block, 密文 []byte) ([]byte, error) {
-	块大小 := 块.BlockSize()
-	if len(密文) == 0 || len(密文)%块大小 != 0 {
-		return nil, 错误密文
+func decryptECB(block cipher.Block, data []byte) ([]byte, error) {
+	blockSize := block.BlockSize()
+	if len(data) == 0 || len(data)%blockSize != 0 {
+		return nil, errCiphertext
 	}
-	明文 := make([]byte, len(密文))
-	for 偏移 := 0; 偏移 < len(密文); 偏移 += 块大小 {
-		块.Decrypt(明文[偏移:偏移+块大小], 密文[偏移:偏移+块大小])
+	out := make([]byte, len(data))
+	for offset := 0; offset < len(data); offset += blockSize {
+		block.Decrypt(out[offset:offset+blockSize], data[offset:offset+blockSize])
 	}
-	return PKCS7去填充(明文, 块大小)
+	return pkcs7Unpad(out, blockSize)
 }

@@ -3,83 +3,83 @@ package text
 // D文本类 对外命名空间类型（根包通过类型别名导出）。
 type D文本类 struct{}
 
-func (D文本类) D取文本左边(内容, 标记 string) string {
-	return 取文本左边(内容, 标记)
+func (D文本类) D取文本左边(content, flag string) string {
+	return leftText(content, flag)
 }
 
-func (D文本类) D取文本右边(内容, 标记 string) string {
-	return 取文本右边(内容, 标记)
+func (D文本类) D取文本右边(content, flag string) string {
+	return rightText(content, flag)
 }
 
-func (D文本类) D取左边(内容 string, 长度 int) string {
-	return 取左边(内容, 长度)
+func (D文本类) D取左边(content string, n int) string {
+	return left(content, n)
 }
 
-func (D文本类) D取右边(内容 string, 长度 int) string {
-	return 取右边(内容, 长度)
+func (D文本类) D取右边(content string, n int) string {
+	return right(content, n)
 }
 
-func (D文本类) D取文本长度(内容 string) int {
-	return 取文本长度(内容)
+func (D文本类) D取文本长度(content string) int {
+	return textLen(content)
 }
 
-func (D文本类) D寻找文本(内容, 子文本 string) int {
-	return 寻找文本(内容, 子文本)
+func (D文本类) D寻找文本(content, sub string) int {
+	return findText(content, sub)
 }
 
-func (D文本类) D删首空(内容 string) string {
-	return 删首空(内容)
+func (D文本类) D删首空(content string) string {
+	return trimLeftSpace(content)
 }
 
-func (D文本类) D删尾空(内容 string) string {
-	return 删尾空(内容)
+func (D文本类) D删尾空(content string) string {
+	return trimRightSpace(content)
 }
 
-func (D文本类) D删首尾空(内容 string) string {
-	return 删首尾空(内容)
+func (D文本类) D删首尾空(content string) string {
+	return trimSpace(content)
 }
 
-func (D文本类) D删全部空(内容 string) string {
-	return 删全部空(内容)
+func (D文本类) D删全部空(content string) string {
+	return trimAllSpace(content)
 }
 
-func (D文本类) D子文本替换(内容, 原文本, 新文本 string) string {
-	return 子文本替换(内容, 原文本, 新文本)
+func (D文本类) D子文本替换(content, rawText, newText string) string {
+	return replaceSub(content, rawText, newText)
 }
 
-func (D文本类) D取文本中间(内容 string, 起始位置, 长度 int) string {
-	return 取文本中间(内容, 起始位置, 长度)
+func (D文本类) D取文本中间(content string, startPos, n int) string {
+	return mid(content, startPos, n)
 }
 
-func (D文本类) D取文本中间文本(内容, 左边文本, 右边文本 string) string {
-	return 取文本中间文本(内容, 左边文本, 右边文本)
+func (D文本类) D取文本中间文本(content, leftStr, rightStr string) string {
+	return midText(content, leftStr, rightStr)
 }
 
-func (D文本类) D是否为字母(内容 string) bool {
-	return 是否为字母(内容)
+func (D文本类) D是否为字母(content string) bool {
+	return isLetter(content)
 }
 
-func (D文本类) D是否为数字(内容 string) bool {
-	return 是否为数字(内容)
+func (D文本类) D是否为数字(content string) bool {
+	return isDigit(content)
 }
 
-func (D文本类) D是否为汉字(内容 string) bool {
-	return 是否为汉字(内容)
+func (D文本类) D是否为汉字(content string) bool {
+	return isHan(content)
 }
 
-func (D文本类) D只取字母(内容 string) string {
-	return 只取字母(内容)
+func (D文本类) D只取字母(content string) string {
+	return lettersOnly(content)
 }
 
-func (D文本类) D只取数字(内容 string) string {
-	return 只取数字(内容)
+func (D文本类) D只取数字(content string) string {
+	return digitsOnly(content)
 }
 
-func (D文本类) D只取汉字(内容 string) string {
-	return 只取汉字(内容)
+func (D文本类) D只取汉字(content string) string {
+	return hanOnly(content)
 }
 
-func (D文本类) D取随机字符(位数 int, 小写字母, 大写字母, 数字 bool) string {
-	return 取随机字符(位数, 小写字母, 大写字母, 数字)
+func (D文本类) D取随机字符(bits int, lowerLetters, upperLetters, digit bool) string {
+	return randomChars(bits, lowerLetters, upperLetters, digit)
 }
 

@@ -6,59 +6,59 @@ import (
 	"strings"
 )
 
-func 规范化协议(协议 string) (string, error) {
-	协议 = strings.ToLower(strings.TrimSpace(协议))
-	switch 协议 {
+func normalizeScheme(scheme string) (string, error) {
+	scheme = strings.ToLower(strings.TrimSpace(scheme))
+	switch scheme {
 	case "http", "https", "socks5", "socks5h":
-		if 协议 == "socks5h" {
-			协议 = "socks5"
+		if scheme == "socks5h" {
+			scheme = "socks5"
 		}
-		return 协议, nil
+		return scheme, nil
 	default:
-		return "", fmt.Errorf("不支持的协议: %s", 协议)
+		return "", fmt.Errorf("不支持的协议: %s", scheme)
 	}
 }
 
 // 解析代理行 将一行文本规范为 scheme://[user:pass@]host:port。
-func 解析代理行(行, 默认协议 string) (string, error) {
-	行 = strings.TrimSpace(行)
-	if 行 == "" || strings.HasPrefix(行, "#") {
+func parseProxyLine(line, defaultScheme string) (string, error) {
+	line = strings.TrimSpace(line)
+	if line == "" || strings.HasPrefix(line, "#") {
 		return "", fmt.Errorf("空行")
 	}
-	默认协议, 错误 := 规范化协议(默认协议)
-	if 错误 != nil {
-		默认协议 = "http"
+	defaultScheme, err := normalizeScheme(defaultScheme)
+	if err != nil {
+		defaultScheme = "http"
 	}
-	if !strings.Contains(行, "://") {
-		行 = 默认协议 + "://" + 行
+	if !strings.Contains(line, "://") {
+		line = defaultScheme + "://" + line
 	}
-	u, 错误 := url.Parse(行)
-	if 错误 != nil {
-		return "", 错误
+	u, err := url.Parse(line)
+	if err != nil {
+		return "", err
 	}
-	协议, 错误 := 规范化协议(u.Scheme)
-	if 错误 != nil {
-		return "", 错误
+	scheme, err := normalizeScheme(u.Scheme)
+	if err != nil {
+		return "", err
 	}
 	if u.Host == "" {
 		return "", fmt.Errorf("缺少主机")
 	}
 	// 强制带端口时 Host 已含端口；无端口也允许（少见）
-	u.Scheme = 协议
+	u.Scheme = scheme
 	u.Path = ""
 	u.RawQuery = ""
 	u.Fragment = ""
 	return u.String(), nil
 }
 
-func 代理键(代理URL string) string {
-	u, 错误 := url.Parse(代理URL)
-	if 错误 != nil {
-		return 代理URL
+func proxyKey(proxyURL string) string {
+	u, err := url.Parse(proxyURL)
+	if err != nil {
+		return proxyURL
 	}
-	用户 := ""
+	user := ""
 	if u.User != nil {
-		用户 = u.User.String() + "@"
+		user = u.User.String() + "@"
 	}
-	return strings.ToLower(u.Scheme) + "://" + 用户 + u.Host
+	return strings.ToLower(u.Scheme) + "://" + user + u.Host
 }

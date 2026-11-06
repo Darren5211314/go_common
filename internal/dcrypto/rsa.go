@@ -12,121 +12,121 @@ import (
 	"strings"
 )
 
-var 错误RSA密钥 = errors.New("RSA密钥无效")
+var errRSAKey = errors.New("RSA密钥无效")
 
 // RSAGenerateKeyPair 生成 PEM 格式公钥与私钥；位数小于等于 0 时使用 2048。
-func RSAGenerateKeyPair(位数 int) (公钥PEM, 私钥PEM string, err error) {
-	if 位数 <= 0 {
-		位数 = 2048
+func RSAGenerateKeyPair(bits int) (publicKeyPEM, privateKeyPEM string, err error) {
+	if bits <= 0 {
+		bits = 2048
 	}
-	私钥, 错误 := rsa.GenerateKey(rand.Reader, 位数)
-	if 错误 != nil {
-		return "", "", 错误
+	privateKey, err := rsa.GenerateKey(rand.Reader, bits)
+	if err != nil {
+		return "", "", err
 	}
-	私钥块 := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(私钥)}
-	公钥字节, 错误 := x509.MarshalPKIXPublicKey(&私钥.PublicKey)
-	if 错误 != nil {
-		return "", "", 错误
+	privBlock := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}
+	pubBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		return "", "", err
 	}
-	公钥块 := &pem.Block{Type: "PUBLIC KEY", Bytes: 公钥字节}
-	return string(pem.EncodeToMemory(公钥块)), string(pem.EncodeToMemory(私钥块)), nil
+	pubBlock := &pem.Block{Type: "PUBLIC KEY", Bytes: pubBytes}
+	return string(pem.EncodeToMemory(pubBlock)), string(pem.EncodeToMemory(privBlock)), nil
 }
 
-func 解析公钥(公钥PEM string) (*rsa.PublicKey, error) {
-	块, _ := pem.Decode([]byte(strings.TrimSpace(公钥PEM)))
-	if 块 == nil {
-		return nil, 错误RSA密钥
+func parsePublicKey(publicKeyPEM string) (*rsa.PublicKey, error) {
+	block, _ := pem.Decode([]byte(strings.TrimSpace(publicKeyPEM)))
+	if block == nil {
+		return nil, errRSAKey
 	}
-	公钥任意, 错误 := x509.ParsePKIXPublicKey(块.Bytes)
-	if 错误 != nil {
+	pubAny, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
 		// 兼容 PKCS1 公钥
-		公钥, 错误2 := x509.ParsePKCS1PublicKey(块.Bytes)
-		if 错误2 != nil {
-			return nil, 错误
+		publicKey, err2 := x509.ParsePKCS1PublicKey(block.Bytes)
+		if err2 != nil {
+			return nil, err
 		}
-		return 公钥, nil
+		return publicKey, nil
 	}
-	公钥, 成功 := 公钥任意.(*rsa.PublicKey)
-	if !成功 {
-		return nil, 错误RSA密钥
+	publicKey, ok := pubAny.(*rsa.PublicKey)
+	if !ok {
+		return nil, errRSAKey
 	}
-	return 公钥, nil
+	return publicKey, nil
 }
 
-func 解析私钥(私钥PEM string) (*rsa.PrivateKey, error) {
-	块, _ := pem.Decode([]byte(strings.TrimSpace(私钥PEM)))
-	if 块 == nil {
-		return nil, 错误RSA密钥
+func parsePrivateKey(privateKeyPEM string) (*rsa.PrivateKey, error) {
+	block, _ := pem.Decode([]byte(strings.TrimSpace(privateKeyPEM)))
+	if block == nil {
+		return nil, errRSAKey
 	}
-	私钥, 错误 := x509.ParsePKCS1PrivateKey(块.Bytes)
-	if 错误 != nil {
-		密钥, 错误2 := x509.ParsePKCS8PrivateKey(块.Bytes)
-		if 错误2 != nil {
-			return nil, 错误
+	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		key, err2 := x509.ParsePKCS8PrivateKey(block.Bytes)
+		if err2 != nil {
+			return nil, err
 		}
-		rsa私钥, 成功 := 密钥.(*rsa.PrivateKey)
-		if !成功 {
-			return nil, 错误RSA密钥
+		rsaPrivateKey, ok := key.(*rsa.PrivateKey)
+		if !ok {
+			return nil, errRSAKey
 		}
-		return rsa私钥, nil
+		return rsaPrivateKey, nil
 	}
-	return 私钥, nil
+	return privateKey, nil
 }
 
 // RSAEncrypt 公钥加密（PKCS#1 v1.5），返回密文十六进制。
-func RSAEncrypt(明文, 公钥PEM string) (string, error) {
-	公钥, 错误 := 解析公钥(公钥PEM)
-	if 错误 != nil {
-		return "", 错误
+func RSAEncrypt(data, publicKeyPEM string) (string, error) {
+	publicKey, err := parsePublicKey(publicKeyPEM)
+	if err != nil {
+		return "", err
 	}
-	密文, 错误 := rsa.EncryptPKCS1v15(rand.Reader, 公钥, []byte(明文))
-	if 错误 != nil {
-		return "", 错误
+	out, err := rsa.EncryptPKCS1v15(rand.Reader, publicKey, []byte(data))
+	if err != nil {
+		return "", err
 	}
-	return hex.EncodeToString(密文), nil
+	return hex.EncodeToString(out), nil
 }
 
 // RSADecrypt 私钥解密（PKCS#1 v1.5），密文为十六进制。
-func RSADecrypt(密文hex, 私钥PEM string) (string, error) {
-	私钥, 错误 := 解析私钥(私钥PEM)
-	if 错误 != nil {
-		return "", 错误
+func RSADecrypt(data, privateKeyPEM string) (string, error) {
+	privateKey, err := parsePrivateKey(privateKeyPEM)
+	if err != nil {
+		return "", err
 	}
-	密文, 错误 := hex.DecodeString(strings.TrimSpace(密文hex))
-	if 错误 != nil {
-		return "", 错误
+	raw, err := hex.DecodeString(strings.TrimSpace(data))
+	if err != nil {
+		return "", err
 	}
-	明文, 错误 := rsa.DecryptPKCS1v15(rand.Reader, 私钥, 密文)
-	if 错误 != nil {
-		return "", 错误
+	out, err := rsa.DecryptPKCS1v15(rand.Reader, privateKey, raw)
+	if err != nil {
+		return "", err
 	}
-	return string(明文), nil
+	return string(out), nil
 }
 
 // RSASign 私钥签名（SHA256 + PKCS1v15），返回签名十六进制。
-func RSASign(数据, 私钥PEM string) (string, error) {
-	私钥, 错误 := 解析私钥(私钥PEM)
-	if 错误 != nil {
-		return "", 错误
+func RSASign(data, privateKeyPEM string) (string, error) {
+	privateKey, err := parsePrivateKey(privateKeyPEM)
+	if err != nil {
+		return "", err
 	}
-	和 := sha256.Sum256([]byte(数据))
-	签名, 错误 := rsa.SignPKCS1v15(rand.Reader, 私钥, crypto.SHA256, 和[:])
-	if 错误 != nil {
-		return "", 错误
+	sum := sha256.Sum256([]byte(data))
+	signature, err := rsa.SignPKCS1v15(rand.Reader, privateKey, crypto.SHA256, sum[:])
+	if err != nil {
+		return "", err
 	}
-	return hex.EncodeToString(签名), nil
+	return hex.EncodeToString(signature), nil
 }
 
 // RSAVerify 公钥验签（SHA256 + PKCS1v15）。
-func RSAVerify(数据, 签名hex, 公钥PEM string) error {
-	公钥, 错误 := 解析公钥(公钥PEM)
-	if 错误 != nil {
-		return 错误
+func RSAVerify(data, signatureHex, publicKeyPEM string) error {
+	publicKey, err := parsePublicKey(publicKeyPEM)
+	if err != nil {
+		return err
 	}
-	签名, 错误 := hex.DecodeString(strings.TrimSpace(签名hex))
-	if 错误 != nil {
-		return 错误
+	signature, err := hex.DecodeString(strings.TrimSpace(signatureHex))
+	if err != nil {
+		return err
 	}
-	和 := sha256.Sum256([]byte(数据))
-	return rsa.VerifyPKCS1v15(公钥, crypto.SHA256, 和[:], 签名)
+	sum := sha256.Sum256([]byte(data))
+	return rsa.VerifyPKCS1v15(publicKey, crypto.SHA256, sum[:], signature)
 }

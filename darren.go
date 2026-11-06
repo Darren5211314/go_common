@@ -54,6 +54,7 @@ type D任务 = dthread.D任务
 type D客户端 = dhttp.D客户端
 type D会话 = dhttp.D会话
 type D响应 = dhttp.D响应
+type D发送选项 = dhttp.D发送选项
 
 type D引擎 = djs.D引擎
 

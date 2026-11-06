@@ -6,71 +6,71 @@ import (
 	"strings"
 )
 
-func 解析Cookie串(文本 string) map[string]string {
-	结果 := make(map[string]string)
-	文本 = strings.TrimSpace(文本)
-	if 文本 == "" {
-		return 结果
+func parseCookieString(text string) map[string]string {
+	result := make(map[string]string)
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return result
 	}
 	// 支持 a=1; b=2 与 a=1&b=2
-	文本 = strings.ReplaceAll(文本, "&", ";")
-	for _, 段 := range strings.Split(文本, ";") {
-		段 = strings.TrimSpace(段)
-		if 段 == "" {
+	text = strings.ReplaceAll(text, "&", ";")
+	for _, part := range strings.Split(text, ";") {
+		part = strings.TrimSpace(part)
+		if part == "" {
 			continue
 		}
-		键, 值, ok := strings.Cut(段, "=")
-		键 = strings.TrimSpace(键)
-		if 键 == "" || !ok {
+		k, value, ok := strings.Cut(part, "=")
+		k = strings.TrimSpace(k)
+		if k == "" || !ok {
 			continue
 		}
-		结果[键] = strings.TrimSpace(值)
+		result[k] = strings.TrimSpace(value)
 	}
-	return 结果
+	return result
 }
 
-func 合并Cookie映射(多份 ...map[string]string) map[string]string {
-	结果 := make(map[string]string)
-	for _, 一份 := range 多份 {
-		for 键, 值 := range 一份 {
-			结果[键] = 值
+func mergeCookieMaps(parts ...map[string]string) map[string]string {
+	result := make(map[string]string)
+	for _, one := range parts {
+		for k, value := range one {
+			result[k] = value
 		}
 	}
-	return 结果
+	return result
 }
 
-func Cookie映射转串(映射 map[string]string) string {
-	if len(映射) == 0 {
+func cookieMapToString(m map[string]string) string {
+	if len(m) == 0 {
 		return ""
 	}
-	键列表 := make([]string, 0, len(映射))
-	for 键 := range 映射 {
-		键列表 = append(键列表, 键)
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
 	}
-	sort.Strings(键列表)
-	部分 := make([]string, 0, len(键列表))
-	for _, 键 := range 键列表 {
-		部分 = append(部分, 键+"="+映射[键])
+	sort.Strings(keys)
+	chunk := make([]string, 0, len(keys))
+	for _, k := range keys {
+		chunk = append(chunk, k+"="+m[k])
 	}
-	return strings.Join(部分, "; ")
+	return strings.Join(chunk, "; ")
 }
 
-func 从响应提取Cookie(头 http.Header) map[string]string {
-	结果 := make(map[string]string)
-	for _, 原始 := range 头.Values("Set-Cookie") {
-		if 原始 == "" {
+func cookiesFromResponse(header http.Header) map[string]string {
+	result := make(map[string]string)
+	for _, raw := range header.Values("Set-Cookie") {
+		if raw == "" {
 			continue
 		}
-		第一 := strings.SplitN(原始, ";", 2)[0]
-		键, 值, 成功 := strings.Cut(第一, "=")
-		if !成功 {
+		first := strings.SplitN(raw, ";", 2)[0]
+		k, value, ok := strings.Cut(first, "=")
+		if !ok {
 			continue
 		}
-		键 = strings.TrimSpace(键)
-		if 键 == "" {
+		k = strings.TrimSpace(k)
+		if k == "" {
 			continue
 		}
-		结果[键] = strings.TrimSpace(值)
+		result[k] = strings.TrimSpace(value)
 	}
-	return 结果
+	return result
 }

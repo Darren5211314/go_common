@@ -36,35 +36,35 @@ type shFileOpStruct struct {
 }
 
 // D删除到回收站 将文件或目录移入 Windows 回收站。
-func 删除到回收站(路径 string) error {
-	路径 = strings.TrimSpace(路径)
-	if 路径 == "" {
+func moveToTrash(path string) error {
+	path = strings.TrimSpace(path)
+	if path == "" {
 		return errors.New("路径为空")
 	}
-	绝对, 错误 := filepath.Abs(路径)
-	if 错误 != nil {
-		return 错误
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return err
 	}
-	if _, 错误 = os.Lstat(绝对); 错误 != nil {
-		return 错误
+	if _, err = os.Lstat(absPath); err != nil {
+		return err
 	}
 
 	// SHFileOperation 要求双 NUL 结尾的路径列表
-	来源切片, 错误 := syscall.UTF16FromString(绝对)
-	if 错误 != nil {
-		return 错误
+	fromUTF16, err := syscall.UTF16FromString(absPath)
+	if err != nil {
+		return err
 	}
-	来源切片 = append(来源切片, 0) // 额外 NUL，形成双终止
-	操作 := &shFileOpStruct{
+	fromUTF16 = append(fromUTF16, 0) // 额外 NUL，形成双终止
+	op := &shFileOpStruct{
 		wFunc:  foDelete,
-		pFrom:  &来源切片[0],
+		pFrom:  &fromUTF16[0],
 		fFlags: fofAllowUndo | fofNoConfirmation | fofSilent | fofNoErrorUI,
 	}
-	返回, _, _ := procSHFileOperationW.Call(uintptr(unsafe.Pointer(操作)))
-	if 返回 != 0 {
+	ret, _, _ := procSHFileOperationW.Call(uintptr(unsafe.Pointer(op)))
+	if ret != 0 {
 		return errors.New("移入回收站失败")
 	}
-	if 操作.fAnyOperationsAborted != 0 {
+	if op.fAnyOperationsAborted != 0 {
 		return errors.New("移入回收站被中止")
 	}
 	return nil

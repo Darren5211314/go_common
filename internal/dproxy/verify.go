@@ -12,51 +12,51 @@ import (
 	xproxy "golang.org/x/net/proxy"
 )
 
-func 验证代理(ctx context.Context, 代理URL, 验证地址 string, 超时 time.Duration) error {
-	u, 错误 := url.Parse(代理URL)
-	if 错误 != nil {
-		return 错误
+func verifyProxy(ctx context.Context, proxyURL, verifyURL string, timeout time.Duration) error {
+	u, err := url.Parse(proxyURL)
+	if err != nil {
+		return err
 	}
-	客户端 := &http.Client{Timeout: 超时}
-	传输 := &http.Transport{
+	client := &http.Client{Timeout: timeout}
+	transport := &http.Transport{
 		DisableKeepAlives: true,
 	}
 	switch strings.ToLower(u.Scheme) {
 	case "http", "https":
-		传输.Proxy = http.ProxyURL(u)
+		transport.Proxy = http.ProxyURL(u)
 	case "socks5":
-		拨号, 错误 := 新建SOCKS5拨号(u)
-		if 错误 != nil {
-			return 错误
+		dial, err := newSOCKS5Dialer(u)
+		if err != nil {
+			return err
 		}
-		传输.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
-			return 拨号.Dial(network, address)
+		transport.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
+			return dial.Dial(network, address)
 		}
 	default:
 		return fmt.Errorf("不支持的协议: %s", u.Scheme)
 	}
-	客户端.Transport = 传输
+	client.Transport = transport
 
-	请求, 错误 := http.NewRequestWithContext(ctx, http.MethodGet, 验证地址, nil)
-	if 错误 != nil {
-		return 错误
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, verifyURL, nil)
+	if err != nil {
+		return err
 	}
-	响应, 错误 := 客户端.Do(请求)
-	if 错误 != nil {
-		return 错误
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
 	}
-	_ = 响应.Body.Close()
-	if 响应.StatusCode >= 400 {
-		return fmt.Errorf("验证地址返回状态码 %d", 响应.StatusCode)
+	_ = resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("验证地址返回状态码 %d", resp.StatusCode)
 	}
 	return nil
 }
 
-func 新建SOCKS5拨号(u *url.URL) (xproxy.Dialer, error) {
-	var 认证 *xproxy.Auth
+func newSOCKS5Dialer(u *url.URL) (xproxy.Dialer, error) {
+	var auth *xproxy.Auth
 	if u.User != nil {
-		密码, _ := u.User.Password()
-		认证 = &xproxy.Auth{User: u.User.Username(), Password: 密码}
+		password, _ := u.User.Password()
+		auth = &xproxy.Auth{User: u.User.Username(), Password: password}
 	}
-	return xproxy.SOCKS5("tcp", u.Host, 认证, xproxy.Direct)
+	return xproxy.SOCKS5("tcp", u.Host, auth, xproxy.Direct)
 }

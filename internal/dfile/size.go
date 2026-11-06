@@ -8,28 +8,28 @@ import (
 
 // D取文件大小 按单位返回文件大小（1024 进制）。
 // 单位：B/KB/MB/GB/TB（大小写不敏感）；空或非法按 B。
-func 取文件大小(路径, 单位 string) (float64, error) {
-	路径 = strings.TrimSpace(路径)
-	if 路径 == "" {
+func getFileSize(path, unit string) (float64, error) {
+	path = strings.TrimSpace(path)
+	if path == "" {
 		return 0, errors.New("路径为空")
 	}
-	信息, 错误 := os.Stat(路径)
-	if 错误 != nil {
-		return 0, 错误
+	info, err := os.Stat(path)
+	if err != nil {
+		return 0, err
 	}
-	if 信息.IsDir() {
+	if info.IsDir() {
 		return 0, errors.New("路径是目录")
 	}
-	字节 := float64(信息.Size())
-	除数 := 单位除数(单位)
-	return 字节 / 除数, nil
+	bytes := float64(info.Size())
+	div := unitDivisor(unit)
+	return bytes / div, nil
 }
 
-func 单位除数(单位 string) float64 {
-	开关 := strings.ToUpper(strings.TrimSpace(单位))
-	开关 = strings.TrimSuffix(开关, "YTE")
-	开关 = strings.TrimSuffix(开关, "IB")
-	switch 开关 {
+func unitDivisor(unit string) float64 {
+	u := strings.ToUpper(strings.TrimSpace(unit))
+	u = strings.TrimSuffix(u, "YTE")
+	u = strings.TrimSuffix(u, "IB")
+	switch u {
 	case "K", "KB":
 		return 1024
 	case "M", "MB":

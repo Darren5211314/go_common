@@ -10,128 +10,128 @@ import (
 )
 
 // D删除文件 永久删除文件或目录（目录非空时递归删除）。
-func 删除文件(路径 string) error {
-	路径 = strings.TrimSpace(路径)
-	if 路径 == "" {
+func deleteFile(path string) error {
+	path = strings.TrimSpace(path)
+	if path == "" {
 		return errors.New("路径为空")
 	}
-	信息, 错误 := os.Lstat(路径)
-	if 错误 != nil {
-		return 错误
+	info, err := os.Lstat(path)
+	if err != nil {
+		return err
 	}
-	if 信息.IsDir() {
-		return os.RemoveAll(路径)
+	if info.IsDir() {
+		return os.RemoveAll(path)
 	}
-	return os.Remove(路径)
+	return os.Remove(path)
 }
 
 // D移动文件 移动文件或目录到目标路径；目标父目录自动创建。
 // 同盘用 Rename；跨盘失败则复制后删除源（仅普通文件可跨盘回退）。
-func 移动文件(源, 目标 string) error {
-	源 = strings.TrimSpace(源)
-	目标 = strings.TrimSpace(目标)
-	if 源 == "" || 目标 == "" {
+func moveFile(src, dst string) error {
+	src = strings.TrimSpace(src)
+	dst = strings.TrimSpace(dst)
+	if src == "" || dst == "" {
 		return errors.New("路径为空")
 	}
-	if 错误 := os.MkdirAll(filepath.Dir(目标), 0o755); 错误 != nil {
-		return 错误
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
 	}
-	if 错误 := os.Rename(源, 目标); 错误 == nil {
+	if err := os.Rename(src, dst); err == nil {
 		return nil
 	}
-	信息, 错误 := os.Stat(源)
-	if 错误 != nil {
-		return 错误
+	info, err := os.Stat(src)
+	if err != nil {
+		return err
 	}
-	if 信息.IsDir() {
+	if info.IsDir() {
 		return errors.New("跨盘移动目录失败，请先复制再删除")
 	}
-	if 错误 := 复制文件(源, 目标); 错误 != nil {
-		return 错误
+	if err := copyFile(src, dst); err != nil {
+		return err
 	}
-	return os.Remove(源)
+	return os.Remove(src)
 }
 
 // D复制文件 复制普通文件到目标；目标父目录自动创建；覆盖已存在目标。
-func 复制文件(源, 目标 string) error {
-	源 = strings.TrimSpace(源)
-	目标 = strings.TrimSpace(目标)
-	if 源 == "" || 目标 == "" {
+func copyFile(src, dst string) error {
+	src = strings.TrimSpace(src)
+	dst = strings.TrimSpace(dst)
+	if src == "" || dst == "" {
 		return errors.New("路径为空")
 	}
-	源信息, 错误 := os.Stat(源)
-	if 错误 != nil {
-		return 错误
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return err
 	}
-	if 源信息.IsDir() {
+	if srcInfo.IsDir() {
 		return errors.New("不支持复制目录")
 	}
-	if 错误 := os.MkdirAll(filepath.Dir(目标), 0o755); 错误 != nil {
-		return 错误
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
 	}
-	读, 错误 := os.Open(源)
-	if 错误 != nil {
-		return 错误
+	inFile, err := os.Open(src)
+	if err != nil {
+		return err
 	}
-	defer 读.Close()
+	defer inFile.Close()
 
-	写, 错误 := os.OpenFile(目标, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 源信息.Mode().Perm())
-	if 错误 != nil {
-		return 错误
+	outFile, err := os.OpenFile(dst, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, srcInfo.Mode().Perm())
+	if err != nil {
+		return err
 	}
-	defer 写.Close()
+	defer outFile.Close()
 
-	if _, 错误 = io.Copy(写, 读); 错误 != nil {
-		return 错误
+	if _, err = io.Copy(outFile, inFile); err != nil {
+		return err
 	}
-	return 写.Sync()
+	return outFile.Sync()
 }
 
 // D重命名 重命名或移动路径（同 os.Rename）。
-func 重命名(旧路径, 新路径 string) error {
-	旧路径 = strings.TrimSpace(旧路径)
-	新路径 = strings.TrimSpace(新路径)
-	if 旧路径 == "" || 新路径 == "" {
+func renamePath(oldPath, newPath string) error {
+	oldPath = strings.TrimSpace(oldPath)
+	newPath = strings.TrimSpace(newPath)
+	if oldPath == "" || newPath == "" {
 		return errors.New("路径为空")
 	}
-	if 错误 := os.MkdirAll(filepath.Dir(新路径), 0o755); 错误 != nil {
-		return 错误
+	if err := os.MkdirAll(filepath.Dir(newPath), 0o755); err != nil {
+		return err
 	}
-	return os.Rename(旧路径, 新路径)
+	return os.Rename(oldPath, newPath)
 }
 
 // D取扩展名 返回含点扩展名，如 ".txt"；无则 ""。
-func 取扩展名(路径 string) string {
-	return filepath.Ext(路径)
+func getExt(path string) string {
+	return filepath.Ext(path)
 }
 
 // D文件是否存在 路径存在且为普通文件（非目录）时为 true。
-func 文件是否存在(路径 string) bool {
-	信息, 错误 := os.Stat(路径)
-	if 错误 != nil {
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
 		return false
 	}
-	return !信息.IsDir()
+	return !info.IsDir()
 }
 
 // D目录是否存在 路径存在且为目录时为 true。
-func 目录是否存在(路径 string) bool {
-	信息, 错误 := os.Stat(路径)
-	if 错误 != nil {
+func dirExists(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
 		return false
 	}
-	return 信息.IsDir()
+	return info.IsDir()
 }
 
 // D取文件名 取路径最后一段；带扩展名=false 时去掉扩展名。
-func 取文件名(路径 string, 带扩展名 bool) string {
-	名 := filepath.Base(路径)
-	if 带扩展名 {
-		return 名
+func getFileName(path string, withExt bool) string {
+	name := filepath.Base(path)
+	if withExt {
+		return name
 	}
-	扩展 := filepath.Ext(名)
-	if 扩展 == "" {
-		return 名
+	ext := filepath.Ext(name)
+	if ext == "" {
+		return name
 	}
-	return strings.TrimSuffix(名, 扩展)
+	return strings.TrimSuffix(name, ext)
 }

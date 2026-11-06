@@ -5,5 +5,5 @@ type Proxy类 struct{}
 
 // D新建 创建未启动的代理池（带默认配置）。
 func (Proxy类) D新建() *D代理池 {
-	return 新建()
+	return newClient()
 }

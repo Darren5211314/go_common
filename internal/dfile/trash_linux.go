@@ -13,106 +13,106 @@ import (
 )
 
 // D删除到回收站 按 XDG Trash 规范移入 ~/.local/share/Trash。
-func 删除到回收站(路径 string) error {
-	路径 = strings.TrimSpace(路径)
-	if 路径 == "" {
+func moveToTrash(path string) error {
+	path = strings.TrimSpace(path)
+	if path == "" {
 		return errors.New("路径为空")
 	}
-	绝对, 错误 := filepath.Abs(路径)
-	if 错误 != nil {
-		return 错误
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return err
 	}
-	信息, 错误 := os.Lstat(绝对)
-	if 错误 != nil {
-		return 错误
-	}
-
-	回收根, 错误 := 取回收站根()
-	if 错误 != nil {
-		return 错误
-	}
-	文件目录 := filepath.Join(回收根, "files")
-	信息目录 := filepath.Join(回收根, "info")
-	if 错误 := os.MkdirAll(文件目录, 0o700); 错误 != nil {
-		return 错误
-	}
-	if 错误 := os.MkdirAll(信息目录, 0o700); 错误 != nil {
-		return 错误
+	info, err := os.Lstat(absPath)
+	if err != nil {
+		return err
 	}
 
-	基名 := filepath.Base(绝对)
-	目标 := filepath.Join(文件目录, 基名)
-	信息文件 := filepath.Join(信息目录, 基名+".trashinfo")
-	目标, 信息文件 = 避免冲突(目标, 信息文件)
+	trashBase, err := trashRoot()
+	if err != nil {
+		return err
+	}
+	filesDir := filepath.Join(trashBase, "files")
+	infoDir := filepath.Join(trashBase, "info")
+	if err := os.MkdirAll(filesDir, 0o700); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(infoDir, 0o700); err != nil {
+		return err
+	}
 
-	正文 := fmt.Sprintf("[Trash Info]\nPath=%s\nDeletionDate=%s\n",
-		转义Trash路径(绝对),
+	base := filepath.Base(absPath)
+	dst := filepath.Join(filesDir, base)
+	infoFile := filepath.Join(infoDir, base+".trashinfo")
+	dst, infoFile = avoidConflict(dst, infoFile)
+
+	body := fmt.Sprintf("[Trash Info]\nPath=%s\nDeletionDate=%s\n",
+		escapeTrashPath(absPath),
 		time.Now().Format("2006-01-02T15:04:05"),
 	)
-	if 错误 := os.WriteFile(信息文件, []byte(正文), 0o600); 错误 != nil {
-		return 错误
+	if err := os.WriteFile(infoFile, []byte(body), 0o600); err != nil {
+		return err
 	}
-	if 错误 := os.Rename(绝对, 目标); 错误 != nil {
-		_ = os.Remove(信息文件)
+	if err := os.Rename(absPath, dst); err != nil {
+		_ = os.Remove(infoFile)
 		// 跨盘：复制/移动回退
-		if 信息.IsDir() {
-			return 错误
+		if info.IsDir() {
+			return err
 		}
-		读数据, 读错 := os.ReadFile(绝对)
-		if 读错 != nil {
-			return 读错
+		readData, readErr := os.ReadFile(absPath)
+		if readErr != nil {
+			return readErr
 		}
-		if 写错 := os.WriteFile(目标, 读数据, 信息.Mode().Perm()); 写错 != nil {
-			_ = os.Remove(信息文件)
-			return 写错
+		if writeErr := os.WriteFile(dst, readData, info.Mode().Perm()); writeErr != nil {
+			_ = os.Remove(infoFile)
+			return writeErr
 		}
-		if 删错 := os.Remove(绝对); 删错 != nil {
-			_ = os.Remove(目标)
-			_ = os.Remove(信息文件)
-			return 删错
+		if removeErr := os.Remove(absPath); removeErr != nil {
+			_ = os.Remove(dst)
+			_ = os.Remove(infoFile)
+			return removeErr
 		}
 	}
 	return nil
 }
 
-func 取回收站根() (string, error) {
-	if 家 := strings.TrimSpace(os.Getenv("XDG_DATA_HOME")); 家 != "" {
-		return filepath.Join(家, "Trash"), nil
+func trashRoot() (string, error) {
+	if home := strings.TrimSpace(os.Getenv("XDG_DATA_HOME")); home != "" {
+		return filepath.Join(home, "Trash"), nil
 	}
-	当前, 错误 := user.Current()
-	if 错误 != nil {
-		家 := os.Getenv("HOME")
-		if 家 == "" {
-			return "", 错误
+	cur, err := user.Current()
+	if err != nil {
+		home := os.Getenv("HOME")
+		if home == "" {
+			return "", err
 		}
-		return filepath.Join(家, ".local", "share", "Trash"), nil
+		return filepath.Join(home, ".local", "share", "Trash"), nil
 	}
-	return filepath.Join(当前.HomeDir, ".local", "share", "Trash"), nil
+	return filepath.Join(cur.HomeDir, ".local", "share", "Trash"), nil
 }
 
-func 避免冲突(目标, 信息文件 string) (string, string) {
-	可用 := func(文件路径, 信息路径 string) bool {
-		_, 错1 := os.Lstat(文件路径)
-		_, 错2 := os.Lstat(信息路径)
-		return os.IsNotExist(错1) && os.IsNotExist(错2)
+func avoidConflict(dst, infoFile string) (string, string) {
+	available := func(filePath, infoPath string) bool {
+		_, err1 := os.Lstat(filePath)
+		_, err2 := os.Lstat(infoPath)
+		return os.IsNotExist(err1) && os.IsNotExist(err2)
 	}
-	if 可用(目标, 信息文件) {
-		return 目标, 信息文件
+	if available(dst, infoFile) {
+		return dst, infoFile
 	}
-	扩展 := filepath.Ext(目标)
-	主干 := strings.TrimSuffix(目标, 扩展)
-	信息目录 := filepath.Dir(信息文件)
+	ext := filepath.Ext(dst)
+	stem := strings.TrimSuffix(dst, ext)
+	infoDir := filepath.Dir(infoFile)
 	for i := 1; ; i++ {
-		候选 := fmt.Sprintf("%s_%d%s", 主干, i, 扩展)
-		候选信息 := filepath.Join(信息目录, filepath.Base(候选)+".trashinfo")
-		if 可用(候选, 候选信息) {
-			return 候选, 候选信息
+		candidate := fmt.Sprintf("%s_%d%s", stem, i, ext)
+		candidateInfo := filepath.Join(infoDir, filepath.Base(candidate)+".trashinfo")
+		if available(candidate, candidateInfo) {
+			return candidate, candidateInfo
 		}
 	}
 }
 
-func 转义Trash路径(路径 string) string {
-	替换 := strings.NewReplacer(
+func escapeTrashPath(path string) string {
+	replacer := strings.NewReplacer(
 		`\`, `%5C`,
 		` `, `%20`,
 		`#`, `%23`,
@@ -121,5 +121,5 @@ func 转义Trash路径(路径 string) string {
 		`=`, `%3D`,
 		`%`, `%25`,
 	)
-	return 替换.Replace(路径)
+	return replacer.Replace(path)
 }

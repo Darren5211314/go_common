@@ -10,52 +10,52 @@ import (
 )
 
 var (
-	错误已关闭     = errors.New("引擎已关闭")
-	错误空代码     = errors.New("代码为空")
-	错误变量名为空 = errors.New("变量名为空")
-	错误变量不存在 = errors.New("变量不存在")
-	错误类型不符   = errors.New("变量类型不符")
-	错误不支持引擎 = errors.New("不支持的引擎")
+	errClosed     = errors.New("引擎已关闭")
+	errEmptyCode     = errors.New("代码为空")
+	errEmptyVarName = errors.New("变量名为空")
+	errVarNotFound = errors.New("变量不存在")
+	errTypeMismatch   = errors.New("变量类型不符")
+	errUnsupportedEngine = errors.New("不支持的引擎")
 )
 
 // 后端 具体 JS 实现。
-type 后端 interface {
-	执行(代码 string) (string, error)
-	设置变量(名 string, 值 any) error
-	取原始(名 string) (any, bool, error)
-	关闭()
+type backend interface {
+	eval(code string) (string, error)
+	setVar(name string, value any) error
+	getRaw(name string) (any, bool, error)
+	close()
 }
 
 // D引擎 有状态 JS 引擎（内部加锁，多 goroutine 共用会串行，不崩溃）。
 type D引擎 struct {
-	锁   sync.Mutex
-	后端  后端
-	已关闭 bool
-	名称  string
+	mu   sync.Mutex
+	backend  backend
+	closed bool
+	name  string
 }
 
 // 新建引擎 按名称创建后端；空或 goja 用 goja；v8 需 CGO。
-func 新建引擎(引擎名 string) (*D引擎, error) {
-	名 := strings.ToLower(strings.TrimSpace(引擎名))
-	if 名 == "" {
-		名 = "goja"
+func newEngine(engineName string) (*D引擎, error) {
+	name := strings.ToLower(strings.TrimSpace(engineName))
+	if name == "" {
+		name = "goja"
 	}
 	var (
-		后端实例 后端
-		错误   error
+		backendInst backend
+		err   error
 	)
-	switch 名 {
+	switch name {
 	case "goja":
-		后端实例, 错误 = 新建Goja()
+		backendInst, err = newGoja()
 	case "v8":
-		后端实例, 错误 = 新建V8()
+		backendInst, err = newV8()
 	default:
-		return nil, fmt.Errorf("%w: %s（支持 goja / v8）", 错误不支持引擎, 引擎名)
+		return nil, fmt.Errorf("%w: %s（支持 goja / v8）", errUnsupportedEngine, engineName)
 	}
-	if 错误 != nil {
-		return nil, 错误
+	if err != nil {
+		return nil, err
 	}
-	return &D引擎{后端: 后端实例, 名称: 名}, nil
+	return &D引擎{backend: backendInst, name: name}, nil
 }
 
 // D关闭 释放引擎资源。
@@ -63,15 +63,15 @@ func (e *D引擎) D关闭() {
 	if e == nil {
 		return
 	}
-	e.锁.Lock()
-	defer e.锁.Unlock()
-	if e.已关闭 {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.closed {
 		return
 	}
-	e.已关闭 = true
-	if e.后端 != nil {
-		e.后端.关闭()
-		e.后端 = nil
+	e.closed = true
+	if e.backend != nil {
+		e.backend.close()
+		e.backend = nil
 	}
 }
 
@@ -80,77 +80,77 @@ func (e *D引擎) D引擎名() string {
 	if e == nil {
 		return ""
 	}
-	return e.名称
+	return e.name
 }
 
 // D执行 执行代码，返回最后表达式的字符串形式。
-func (e *D引擎) D执行(代码 string) (string, error) {
-	代码 = strings.TrimSpace(代码)
-	if 代码 == "" {
-		return "", 错误空代码
+func (e *D引擎) D执行(code string) (string, error) {
+	code = strings.TrimSpace(code)
+	if code == "" {
+		return "", errEmptyCode
 	}
-	e.锁.Lock()
-	defer e.锁.Unlock()
-	if e.已关闭 || e.后端 == nil {
-		return "", 错误已关闭
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.closed || e.backend == nil {
+		return "", errClosed
 	}
-	return e.后端.执行(代码)
+	return e.backend.eval(code)
 }
 
 // D执行文件 读取文件并执行。
-func (e *D引擎) D执行文件(路径 string) (string, error) {
-	路径 = strings.TrimSpace(路径)
-	if 路径 == "" {
+func (e *D引擎) D执行文件(path string) (string, error) {
+	path = strings.TrimSpace(path)
+	if path == "" {
 		return "", errors.New("路径为空")
 	}
-	数据, 错误 := os.ReadFile(路径)
-	if 错误 != nil {
-		return "", 错误
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
 	}
-	return e.D执行(string(数据))
+	return e.D执行(string(data))
 }
 
 // D设置变量 设置全局变量。
-func (e *D引擎) D设置变量(名 string, 值 any) error {
-	名 = strings.TrimSpace(名)
-	if 名 == "" {
-		return 错误变量名为空
+func (e *D引擎) D设置变量(name string, value any) error {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return errEmptyVarName
 	}
-	e.锁.Lock()
-	defer e.锁.Unlock()
-	if e.已关闭 || e.后端 == nil {
-		return 错误已关闭
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.closed || e.backend == nil {
+		return errClosed
 	}
-	return e.后端.设置变量(名, 规范化值(值))
+	return e.backend.setVar(name, normalizeValue(value))
 }
 
-func (e *D引擎) 取原始锁定(名 string) (any, error) {
-	名 = strings.TrimSpace(名)
-	if 名 == "" {
-		return nil, 错误变量名为空
+func (e *D引擎) getRawLocked(name string) (any, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, errEmptyVarName
 	}
-	e.锁.Lock()
-	defer e.锁.Unlock()
-	if e.已关闭 || e.后端 == nil {
-		return nil, 错误已关闭
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.closed || e.backend == nil {
+		return nil, errClosed
 	}
-	值, 存在, 错误 := e.后端.取原始(名)
-	if 错误 != nil {
-		return nil, 错误
+	value, exists, err := e.backend.getRaw(name)
+	if err != nil {
+		return nil, err
 	}
-	if !存在 {
-		return nil, 错误变量不存在
+	if !exists {
+		return nil, errVarNotFound
 	}
-	return 值, nil
+	return value, nil
 }
 
 // D取文本 读取全局变量为字符串。
-func (e *D引擎) D取文本(名 string) (string, error) {
-	值, 错误 := e.取原始锁定(名)
-	if 错误 != nil {
-		return "", 错误
+func (e *D引擎) D取文本(name string) (string, error) {
+	value, err := e.getRawLocked(name)
+	if err != nil {
+		return "", err
 	}
-	switch v := 值.(type) {
+	switch v := value.(type) {
 	case string:
 		return v, nil
 	case fmt.Stringer:
@@ -161,12 +161,12 @@ func (e *D引擎) D取文本(名 string) (string, error) {
 }
 
 // D取整数 读取全局变量为 int64。
-func (e *D引擎) D取整数(名 string) (int64, error) {
-	值, 错误 := e.取原始锁定(名)
-	if 错误 != nil {
-		return 0, 错误
+func (e *D引擎) D取整数(name string) (int64, error) {
+	value, err := e.getRawLocked(name)
+	if err != nil {
+		return 0, err
 	}
-	switch v := 值.(type) {
+	switch v := value.(type) {
 	case int64:
 		return v, nil
 	case int:
@@ -178,17 +178,17 @@ func (e *D引擎) D取整数(名 string) (int64, error) {
 	case float32:
 		return int64(v), nil
 	default:
-		return 0, 错误类型不符
+		return 0, errTypeMismatch
 	}
 }
 
 // D取小数 读取全局变量为 float64。
-func (e *D引擎) D取小数(名 string) (float64, error) {
-	值, 错误 := e.取原始锁定(名)
-	if 错误 != nil {
-		return 0, 错误
+func (e *D引擎) D取小数(name string) (float64, error) {
+	value, err := e.getRawLocked(name)
+	if err != nil {
+		return 0, err
 	}
-	switch v := 值.(type) {
+	switch v := value.(type) {
 	case float64:
 		return v, nil
 	case float32:
@@ -198,28 +198,28 @@ func (e *D引擎) D取小数(名 string) (float64, error) {
 	case int:
 		return float64(v), nil
 	default:
-		return 0, 错误类型不符
+		return 0, errTypeMismatch
 	}
 }
 
 // D取逻辑 读取全局变量为 bool。
-func (e *D引擎) D取逻辑(名 string) (bool, error) {
-	值, 错误 := e.取原始锁定(名)
-	if 错误 != nil {
-		return false, 错误
+func (e *D引擎) D取逻辑(name string) (bool, error) {
+	value, err := e.getRawLocked(name)
+	if err != nil {
+		return false, err
 	}
-	b, ok := 值.(bool)
+	b, ok := value.(bool)
 	if !ok {
-		return false, 错误类型不符
+		return false, errTypeMismatch
 	}
 	return b, nil
 }
 
-func 规范化值(值 any) any {
-	if 值 == nil {
+func normalizeValue(value any) any {
+	if value == nil {
 		return nil
 	}
-	switch v := 值.(type) {
+	switch v := value.(type) {
 	case string, bool, int64, float64:
 		return v
 	case int:
