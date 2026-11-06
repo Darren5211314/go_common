@@ -9,6 +9,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/Darren5211314/go_common/internal/dlog"
 )
 
 var (
@@ -65,6 +67,7 @@ type D代理池 struct {
 	Verifying   atomic.Int64
 	Taken     atomic.Int64
 	Expired       atomic.Int64
+	logEnabled    atomic.Bool
 
 	wg sync.WaitGroup
 }
@@ -85,8 +88,28 @@ func newClient() *D代理池 {
 		seen:       make(map[string]struct{}),
 		httpClient: &http.Client{Timeout: 15 * time.Second},
 	}
+	p.logEnabled.Store(true)
 	p.cond = sync.NewCond(&p.mu)
 	return p
+}
+
+// D设置输出日志 控制是否输出拉取/验证/取出等运行日志；默认 true。
+func (p *D代理池) D设置输出日志(enable bool) {
+	p.logEnabled.Store(enable)
+}
+
+func (p *D代理池) logInfow(msg string, keysAndValues ...any) {
+	if !p.logEnabled.Load() {
+		return
+	}
+	dlog.Sugar().Infow(msg, keysAndValues...)
+}
+
+func (p *D代理池) logWarnw(msg string, keysAndValues ...any) {
+	if !p.logEnabled.Load() {
+		return
+	}
+	dlog.Sugar().Warnw(msg, keysAndValues...)
 }
 
 func (p *D代理池) D设置代理链接(link string) {
@@ -256,10 +279,12 @@ func (p *D代理池) GetProxy(waitTime int) (string, error) {
 			item := p.entries[0]
 			p.entries = p.entries[1:]
 			delete(p.seen, proxyKey(item.proxy))
-			p.Taken.Add(1)
+			taken := p.Taken.Add(1)
+			remain := len(p.entries)
 			if p.needRefillLocked() {
 				p.notifyRefill()
 			}
+			p.logInfow("取出代理", "proxy", item.proxy, "已取出", taken, "池剩余", remain)
 			return item.proxy, nil
 		}
 		p.notifyRefill()
@@ -349,6 +374,7 @@ func (p *D代理池) fetchLoop() {
 			lastFetch = time.Now()
 			if err != nil {
 				failStreak++
+				p.logWarnw("从链接拉取代理失败", "err", err)
 				backoff := time.Duration(1<<minInt(failStreak-1, 5)) * time.Second
 				if backoff > 60*time.Second {
 					backoff = 60 * time.Second
@@ -388,6 +414,7 @@ func (p *D代理池) fetchOnce(link, defaultScheme string, needVerify bool) erro
 		return errors.New("代理链接返回错误状态码")
 	}
 
+	added := 0
 	lines := strings.Split(string(body), "\n")
 	for _, line := range lines {
 		proxy, err := parseProxyLine(line, defaultScheme)
@@ -406,6 +433,7 @@ func (p *D代理池) fetchOnce(link, defaultScheme string, needVerify bool) erro
 		}
 		p.seen[k] = struct{}{}
 		p.FetchedFromLink.Add(1)
+		added++
 		if !needVerify {
 			p.enqueueLocked(proxy)
 			p.mu.Unlock()
@@ -423,6 +451,17 @@ func (p *D代理池) fetchOnce(link, defaultScheme string, needVerify bool) erro
 			return errClosed
 		case p.verifyCh <- proxy:
 		}
+	}
+	if added > 0 {
+		p.mu.Lock()
+		avail := len(p.entries)
+		p.mu.Unlock()
+		p.logInfow("从链接获取代理",
+			"本轮新增", added,
+			"验证", needVerify,
+			"池可用", avail,
+			"正在验证", p.Verifying.Load(),
+		)
 	}
 	return nil
 }
@@ -460,6 +499,7 @@ func (p *D代理池) verifyLoop() {
 				continue
 			}
 
+			p.logInfow("正在验证代理", "proxy", proxy)
 			ctx, cancel := context.WithTimeout(context.Background(), timeout)
 			err := verifyProxy(ctx, proxy, url, timeout)
 			cancel()
@@ -475,6 +515,9 @@ func (p *D代理池) verifyLoop() {
 					p.notifyRefill()
 				}
 				p.mu.Unlock()
+				if err != nil {
+					p.logWarnw("代理验证失败", "proxy", proxy, "err", err)
+				}
 				continue
 			}
 			expired := time.Time{}
@@ -483,11 +526,13 @@ func (p *D代理池) verifyLoop() {
 			}
 			p.entries = append(p.entries, poolEntry{proxy: proxy, expireAt: expired})
 			p.VerifyOK.Add(1)
+			avail := len(p.entries)
 			p.cond.Broadcast()
 			if p.needRefillLocked() {
 				p.notifyRefill()
 			}
 			p.mu.Unlock()
+			p.logInfow("代理验证成功", "proxy", proxy, "池可用", avail)
 		}
 	}
 }

@@ -62,14 +62,14 @@ func main() {
 - **JSON**：路径用点号，数组下标为数字段（`data.user.name`、`data.tags.0`）。取值找不到返回空/`0`/`false`；`D设置*` 返回新字符串并自动创建中间节点；`D压缩` / `D格式化` 非法返回空串。
 - **QR**：`D生成` 返回 PNG Base64；`D生成到文件` 写 PNG；`D解析文件` / `D解析Base64` 读回文本。边长 `<=0` 默认 256；纠错固定 Medium。依赖 `skip2/go-qrcode`、`makiuchi-d/gozxing`。
 - **IP**：`D取随机IP` / `D是否有效` / `D取版本` / `D是否私有` / `D是否回环` / `D取本机IP`（网卡局域网）/ `D取外网IP(接口) (string, error)`（按编号单源；1=3322 2=gdt 3=qq-checktime 4=pconline 5=ipinfo 6=icanhazip-v4 7=126 8=httpbin 9=ip-api 10=ipip 11=qq-ip2city 12=icanhazip 13=api64-ipify）；地区查询 `D加载默认数据文件()`（`data/ip2region_v4.xdb`）或 `D加载数据文件(路径)`，再 `D查询(ip)`。依赖 `lionsoul2014/ip2region`。
-- **Proxy**：`池 := Proxy.D新建()` 有状态实例；配置链接/容量/验证/存活等后 `D启动`；`GetProxy(waitTime)`（`-1` 无限等，`>=0` 超时秒）时剔除过期并按缺口异步补充；支持 http/https/socks5；`D取统计` 看计数；`D关闭` 收尾。
+- **Proxy**：`池 := Proxy.D新建()` 有状态实例；配置链接/容量/验证/存活等后 `D启动`；`GetProxy(waitTime)`（`-1` 无限等，`>=0` 超时秒）时剔除过期并按缺口异步补充；支持 http/https/socks5；`D取统计` 看计数；`D关闭` 收尾。运行期默认打日志（拉取/验证/取出）；`D设置输出日志(false)` 可关闭。
 - **Thread**：`Thread.D新建(最大线程数)` → `D启动`；`D投递`（无返回，爬虫常用）/ `D投递任务`（可 `D等待` 结果）；`D暂停`/`D继续`；`D设置最大线程数` 动态扩缩；`D停止` 排空 / `D强制停止` 丢弃排队。
 - **HTTP**：`HTTP.Send` / `HTTP.NewSession` / `HTTP.SetProxyPool`（共用默认客户端）。`SendOptions` 字段：`Data`/`Cookie`/`Headers`/`NoRedirect`/`UseProxy`/`Proxy`/`MaxRetries`/`Timeout`/`CloseMergeCookie`。`MaxRetries`/`Timeout` 未填或 `<=0` 用内置默认（3 / 10s）。`UseProxy=false` 直连；`true`+`Proxy`非空用手动；`true`+空则粘性/池。响应：`GetStatusCode`/`GetBody`/`GetBytes`/`GetLocation`/`GetSetCookie`/`GetCookie`/`GetHeaders`/`GetHeader`/`GetUseProxy`/`GetElapsedMs`。直连复用 KeepAlive；代理禁用 KeepAlive。
 - **JS**：`引擎, _ := JS.D新建("goja")`（或 `"v8"`）；`D设置变量` / `D执行` / `D执行文件` / `D取文本|整数|小数|逻辑` / `D关闭`。单实例内部加锁可并发调用（串行）；高并发请每协程一个引擎。默认 goja（免 CGO，Win/Linux 均可）。V8 依赖 `rogchap.com/v8go`，**仅 Linux/macOS + CGO**；Windows 上请用 goja。注意：当前 `go.mod` 硬依赖 v8go，即使用 goja 也会下载该依赖。
 - **Sync**：`Sync.D新建互斥锁`（`D加锁`/`D解锁`/`D尝试加锁`）；`D新建读写锁`（读/写加解锁与尝试）；`D新建原子计数` / `D新建原子计数初值`（`D加`/`D减`/`D取`/`D设置`/`D比较交换`）。
 - **Codec**：`D网址编码`/`D网址解码`（query，空格 `%20`）；`DBase64编码`/`DBase64解码`；`DBase64网址编码`/`DBase64网址解码`（RawURL）；`D十六进制编码`/`D十六进制解码`（小写）；`D是否UTF8`；`D到GBK`/`D从GBK`（返回 `error`）。解码失败返回空串。
 - 命名空间对象一般不保存可变全局状态（`IP.D加载数据文件` / `D加载默认数据文件`、`Proxy`/`Thread`/`HTTP`/`JS`/`Sync` 实例除外）。
-- **打印输出**：`darren.Info` / `darren.Error` / `darren.Infof`（zap 彩色，自动初始化，带行号，时间 `yyyy-mm-dd hh:mm:ss`）。不要用 `fmt.Print`。
+- **打印输出**：`darren.Info` / `darren.Error` / `darren.Infof`（zap 彩色，自动初始化，带行号，时间 `yyyy-mm-dd hh:mm:ss.SSS`）。不要用 `fmt.Print`。
 
 ## 目录与维护
 
