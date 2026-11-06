@@ -16,33 +16,33 @@ import (
 	"github.com/Darren5211314/go_common/internal/text"
 )
 
-// 命名空间类型别名：实现与方法在 internal，根包只导出入口。
+// 命名空间类型：根包未导出，避免补全出现 AES / AESNS 成对；调用方只用变量入口。
 
-type D文本类 = text.D文本类
-type D时间类 = dtime.D时间类
-type D文件类 = dfile.D文件类
+type textNS = text.TextNS
+type timeNS = dtime.TimeNS
+type fileNS = dfile.FileNS
 
-type AES类 = dcrypto.AES类
-type DES类 = dcrypto.DES类
-type DES3类 = dcrypto.DES3类
-type Hash类 = dcrypto.Hash类
-type HMAC类 = dcrypto.HMAC类
-type CRC类 = dcrypto.CRC类
-type RSA类 = dcrypto.RSA类
-type SM4类 = dcrypto.SM4类
+type aesNS = dcrypto.AESNS
+type desNS = dcrypto.DESNS
+type des3NS = dcrypto.DES3NS
+type hashNS = dcrypto.HashNS
+type hmacNS = dcrypto.HMACNS
+type crcNS = dcrypto.CRCNS
+type rsaNS = dcrypto.RSANS
+type sm4NS = dcrypto.SM4NS
 
-type JSON类 = djson.JSON类
-type QR类 = dqr.QR类
-type IP类 = dip.IP类
+type jsonNS = djson.JSONNS
+type qrNS = dqr.QRNS
+type ipNS = dip.IPNS
 
-type Proxy类 = dproxy.Proxy类
-type Thread类 = dthread.Thread类
-type HTTP类 = dhttp.HTTP类
-type JS类 = djs.JS类
-type Sync类 = dsync.Sync类
-type Codec类 = dcodec.Codec类
+type proxyNS = dproxy.ProxyNS
+type threadNS = dthread.ThreadNS
+type httpNS = dhttp.HTTPNS
+type jsNS = djs.JSNS
+type syncNS = dsync.SyncNS
+type codecNS = dcodec.CodecNS
 
-// 有状态类型别名。
+// 有状态类型别名（调用方需要写类型名）。
 
 type D代理池 = dproxy.D代理池
 type D代理统计 = dproxy.D代理统计
@@ -51,10 +51,9 @@ type D线程池 = dthread.D线程池
 type D线程池统计 = dthread.D线程池统计
 type D任务 = dthread.D任务
 
-type D客户端 = dhttp.D客户端
 type D会话 = dhttp.D会话
 type D响应 = dhttp.D响应
-type D发送选项 = dhttp.D发送选项
+type SendOptions = dhttp.SendOptions
 
 type D引擎 = djs.D引擎
 
@@ -65,25 +64,25 @@ type D原子计数 = dsync.D原子计数
 // 命名空间入口。
 
 var (
-	D文本 D文本类
-	D时间 D时间类
-	D文件 D文件类
+	Text textNS
+	Time timeNS
+	File fileNS
 
-	AES    AES类
-	DES    DES类
-	DES3   DES3类
-	Hash   Hash类
-	HMAC   HMAC类
-	CRC    CRC类
-	RSA    RSA类
-	SM4    SM4类
-	JSON   JSON类
-	QR     QR类
-	IP     IP类
-	Proxy  Proxy类
-	Thread Thread类
-	HTTP   HTTP类
-	JS     JS类
-	Sync   Sync类
-	Codec  Codec类
+	AES    aesNS
+	DES    desNS
+	DES3   des3NS
+	Hash   hashNS
+	HMAC   hmacNS
+	CRC    crcNS
+	RSA    rsaNS
+	SM4    sm4NS
+	JSON   jsonNS
+	QR     qrNS
+	IP     ipNS
+	Proxy  proxyNS
+	Thread threadNS
+	HTTP   httpNS
+	JS     jsNS
+	Sync   syncNS
+	Codec  codecNS
 )

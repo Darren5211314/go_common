@@ -1,20 +1,20 @@
 // Package darren 是面向 Windows exe 与 Ubuntu 等 Linux 项目的个人工具库。
 //
-// 调用方只导入根包，通过中文命名空间对象使用方法，例如：
+// 调用方只导入根包，通过命名空间对象使用方法，例如：
 //
-//	darren.D文本.D取文本左边("abc_123", "_")
-//	darren.D时间.D取现行时间戳(false)
+//	darren.Text.D取文本左边("abc_123", "_")
+//	darren.Time.D取现行时间戳(false)
 //
 // # 命名约定
 //
 // Go 要求跨包导出的标识符必须以 Unicode 大写字母开头；纯中文属于“其他字母”，
-// 无法导出。因此所有对外类型、变量、方法均以英文大写 D 开头，后接中文名，
-// 例如 D文本、D取文本左边。注释仍使用中文。
-// 不要使用 string、time 作为标识符，它们与 Go 内置类型和标准库冲突。
+// 无法导出。命名空间用英文入口（Text / Time / File / AES / HTTP 等）；
+// 中文方法仍以大写 D 开头，例如 D取文本左边。注释仍使用中文。
+// 不要使用小写 string、time、file 作为命名空间名（无法导出，且与内置类型/标准库冲突）。
 //
 // # 错误约定
 //
-// D文本类方法在找不到内容、空输入等情况下返回空字符串，不返回 error。
+// Text（TextNS）方法在找不到内容、空输入等情况下返回空字符串，不返回 error。
 // 加解密、文件、系统调用等后续能力返回 (结果, error)。
 //
 // # 文本约定
@@ -34,7 +34,7 @@
 //
 // # 文件约定
 //
-// D文件：D取文件大小(路径, 单位) 单位为 B/KB/MB/GB/TB（1024 进制）。
+// File：D取文件大小(路径, 单位) 单位为 B/KB/MB/GB/TB（1024 进制）。
 // D删除文件 永久删除；D删除到回收站 支持 Windows 与 Linux XDG Trash。
 // D移动文件 / D复制文件 / D重命名；目标父目录自动创建。
 // D取扩展名 含点；D取文件名(路径, 带扩展名)；D文件是否存在 / D目录是否存在。
@@ -63,7 +63,6 @@
 //	本机 := darren.IP.D取本机IP()
 //	代理池 := darren.Proxy.D新建()
 //	线程池 := darren.Thread.D新建(32)
-//	客户端 := darren.HTTP.D新建()
 //	引擎, _ := darren.JS.D新建("goja")
 //
 // # JS 约定
@@ -119,18 +118,18 @@
 //
 // # HTTP 约定
 //
-// 日常：HTTP.Send(方法, URL) 或 HTTP.Send(方法, URL, D发送选项{...})，无需 D新建。
-// 命名空间 D设置代理池 / D设置默认超时|重试 / D新建会话 作用于默认客户端；多配置用 HTTP.D新建()。
-// D发送选项：Data、Cookie、Headers、NoRedirect、UseProxy、Proxy、MaxRetries、Timeout、CloseMergeCookie。
+// HTTP.Send / HTTP.NewSession / HTTP.SetProxyPool（共用默认客户端）。
+// SendOptions：Data、Cookie、Headers、NoRedirect、UseProxy、Proxy、MaxRetries、Timeout、CloseMergeCookie。
 // UseProxy=false 直连；=true 且 Proxy 非空用手动；=true 且空则粘性/池/直连。
-// Timeout/MaxRetries <=0 用默认（10s / 3 次）；CloseMergeCookie 默认 false（合并）。
+// Timeout/MaxRetries 未填或 <=0 用内置默认（10s / 3 次）；CloseMergeCookie 默认 false（合并）。
 // Data：nil/空串无 body；[]byte/string 原样；map[string]string 为表单。
 // Cookie 支持 a=1; b=2 与 a=1&b=2；值中勿含未编码的 &。
 // 直连复用 KeepAlive；代理禁用 KeepAlive。仅超时/连接/代理/TLS 及 502/503/504 可重试。
+// D响应：GetStatusCode、GetBody、GetBytes、GetLocation、GetSetCookie、GetCookie、GetHeaders、GetHeader、GetUseProxy、GetElapsedMs。
 //
 // # 扩展方式
 //
-// 新增能力步骤：internal 实现 + ns.go 定义 Xxx类/方法 → 测试 → darren.go 类型别名与 var → 更新本文件。
+// 新增能力步骤：internal 实现 + ns.go 定义 XxxNS/方法 → 测试 → darren.go 未导出别名与 var → 更新本文件。
 // import 路径必须是 ASCII（例如 internal/text、internal/dcrypto）。
 // 中文导出加 D 前缀；英文标识本身已大写开头则不加 D。
 // Windows / Linux 专有 API 使用文件名 build tag（xxx_windows.go / xxx_linux.go）拆分。

@@ -1,9 +1,9 @@
 package dproxy
 
-// Proxy类 代理池工厂命名空间。
-type Proxy类 struct{}
+// ProxyNS 代理池工厂命名空间。
+type ProxyNS struct{}
 
 // D新建 创建未启动的代理池（带默认配置）。
-func (Proxy类) D新建() *D代理池 {
+func (ProxyNS) D新建() *D代理池 {
 	return newClient()
 }

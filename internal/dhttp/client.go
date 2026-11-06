@@ -17,7 +17,7 @@ var (
 	errEmptyURL = errors.New("URL为空")
 
 	defaultClientOnce sync.Once
-	defaultClientInst *D客户端
+	defaultClientInst *Client
 )
 
 // 代理池 最小接口，避免强耦合具体类型。
@@ -25,21 +25,21 @@ type proxyPool interface {
 	GetProxy(waitTime int) (string, error)
 }
 
-// D发送选项 可选请求参数；未填字段用零值默认。
-type D发送选项 struct {
+// SendOptions 可选请求参数；未填字段用零值默认。
+type SendOptions struct {
 	Data             any               // 发送体；nil/空串=无 body；[]byte/string 原样；map[string]string=表单。默认 nil
 	Cookie           string            // 额外 Cookie；空=不加。支持 a=1; b=2 与 a=1&b=2。默认 ""
 	Headers          map[string]string // 协议头；nil=无额外头。默认 nil
 	NoRedirect       bool              // true=禁止跟随重定向；false=跟随。默认 false
 	UseProxy         bool              // false=强制直连；true=走代理（见 Proxy）。默认 false
 	Proxy            string            // 手动代理 URL；UseProxy=true 且空=粘性/池；非空=手动且重试不换。默认 ""
-	MaxRetries       int               // 最大尝试次数；<=0 用客户端默认（新建默认 3）。默认 0→3
-	Timeout          int               // 超时秒；<=0 用客户端默认（新建默认 10）。默认 0→10
+	MaxRetries       int               // 最大尝试次数；<=0 用内置默认 3。默认 0→3
+	Timeout          int               // 超时秒；<=0 用内置默认 10。默认 0→10
 	CloseMergeCookie bool              // false=自动合并 Cookie；true=关闭合并。默认 false
 }
 
-// D客户端 HTTP 客户端。
-type D客户端 struct {
+// Client HTTP 客户端。
+type Client struct {
 	mu sync.Mutex
 
 	proxyPoolInst   proxyPool
@@ -47,54 +47,35 @@ type D客户端 struct {
 	defaultRetries int
 }
 
-// D新建 创建独立客户端（多池/多超时场景）；日常可直接 HTTP.Send。
-func newClient() *D客户端 {
-	return &D客户端{
-		defaultTimeoutSec:   10,
-		defaultRetries: 3,
+func newClient() *Client {
+	return &Client{
+		defaultTimeoutSec: 10,
+		defaultRetries:    3,
 	}
 }
 
-func defaultClient() *D客户端 {
+func defaultClient() *Client {
 	defaultClientOnce.Do(func() {
 		defaultClientInst = newClient()
 	})
 	return defaultClientInst
 }
 
-func normalizeOptions(opts []D发送选项) D发送选项 {
+func normalizeOptions(opts []SendOptions) SendOptions {
 	if len(opts) == 0 {
-		return D发送选项{}
+		return SendOptions{}
 	}
 	return opts[0]
 }
 
-func (c *D客户端) D设置代理池(pool proxyPool) {
+func (c *Client) SetProxyPool(pool proxyPool) {
 	c.mu.Lock()
 	c.proxyPoolInst = pool
 	c.mu.Unlock()
 }
 
-func (c *D客户端) D设置默认超时(sec int) {
-	if sec <= 0 {
-		sec = 10
-	}
-	c.mu.Lock()
-	c.defaultTimeoutSec = sec
-	c.mu.Unlock()
-}
-
-func (c *D客户端) D设置默认重试(n int) {
-	if n <= 0 {
-		n = 3
-	}
-	c.mu.Lock()
-	c.defaultRetries = n
-	c.mu.Unlock()
-}
-
-// D新建会话 基于当前客户端配置创建会话（Cookie 持久 + 代理粘性）。
-func (c *D客户端) D新建会话() *D会话 {
+// NewSession 基于当前客户端配置创建会话（Cookie 持久 + 代理粘性）。
+func (c *Client) NewSession() *D会话 {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return &D会话{
@@ -105,23 +86,23 @@ func (c *D客户端) D新建会话() *D会话 {
 
 // D会话 保持 Cookie 与粘性代理（仅记录池代理）。
 type D会话 struct {
-	client   *D客户端
+	client   *Client
 	mu       sync.Mutex
 	Cookie   map[string]string
 	stickyProxy string
 }
 
-func (s *D会话) Send(method, url string, opts ...D发送选项) (*D响应, error) {
+func (s *D会话) Send(method, url string, opts ...SendOptions) (*D响应, error) {
 	return s.client.sendInternal(s, method, url, normalizeOptions(opts))
 }
 
 // Send 单次请求（无会话粘性）。
 // UseProxy=false 强制直连；=true 且 Proxy 非空 用手动代理；=true 且 Proxy 空 则粘性/池/直连。
-func (c *D客户端) Send(method, url string, opts ...D发送选项) (*D响应, error) {
+func (c *Client) Send(method, url string, opts ...SendOptions) (*D响应, error) {
 	return c.sendInternal(nil, method, url, normalizeOptions(opts))
 }
 
-func (c *D客户端) sendInternal(session *D会话, method, url string, opts D发送选项) (*D响应, error) {
+func (c *Client) sendInternal(session *D会话, method, url string, opts SendOptions) (*D响应, error) {
 	url = strings.TrimSpace(url)
 	if url == "" {
 		return nil, errEmptyURL
@@ -200,7 +181,7 @@ func (c *D客户端) sendInternal(session *D会话, method, url string, opts D�
 }
 
 // 选择代理 返回 (代理URL, 是否来自手动, error)。
-func (c *D客户端) pickProxy(session *D会话, useProxy bool, manualProxy string, pool proxyPool, curProxy string, timeoutSec int) (string, bool, error) {
+func (c *Client) pickProxy(session *D会话, useProxy bool, manualProxy string, pool proxyPool, curProxy string, timeoutSec int) (string, bool, error) {
 	if !useProxy {
 		return "", false, nil
 	}
@@ -229,7 +210,7 @@ func (c *D客户端) pickProxy(session *D会话, useProxy bool, manualProxy stri
 	return got, false, err
 }
 
-func (c *D客户端) doOnce(session *D会话, method, url string, opts D发送选项, timeout time.Duration, mergeCookie bool, proxy string) (*D响应, error) {
+func (c *Client) doOnce(session *D会话, method, url string, opts SendOptions, timeout time.Duration, mergeCookie bool, proxy string) (*D响应, error) {
 	startTime := time.Now()
 
 	body, contentType, err := encodeData(opts.Data)
@@ -291,7 +272,7 @@ func (c *D客户端) doOnce(session *D会话, method, url string, opts D发送�
 	httpResp, err := client.Do(req)
 	elapsed := time.Since(startTime).Milliseconds()
 	if elapsed <= 0 {
-		elapsed = 1 // 亚毫秒本机请求仍记 1ms，避免 D取耗时 为 0
+		elapsed = 1 // 亚毫秒本机请求仍记 1ms，避免 GetElapsedMs 为 0
 	}
 	if err != nil {
 		return &D响应{
