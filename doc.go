@@ -40,10 +40,13 @@
 //
 // # 日志约定
 //
+//	darren.Debug("调试", "键", 值)
 //	darren.Info("消息", "键", 值)
 //	darren.Error("失败", "错误", err)
 //	darren.Infof("码=%d", 500)
 //
+// 级别：Debug / Info / Warn / Error / DPanic / Panic / Fatal（及对应 *f）。
+// DPanic 开发环境随后 panic；Panic 打日志后 panic；Fatal 打日志后退出。
 // 首次调用自动初始化（zap 彩色控制台）。
 // 带源码文件名与行号，时间为 yyyy-mm-dd hh:mm:ss.SSS。不要使用 fmt.Print。
 //
@@ -123,6 +126,8 @@
 // Timeout/MaxRetries 未填或 <=0 用内置默认（10s / 3 次）；CloseMergeCookie 默认 false（合并）。
 // Data：nil/空串无 body；[]byte/string 原样；map[string]string 为表单。
 // Cookie 支持 a=1; b=2 与 a=1&b=2；值中勿含未编码的 &。
+// NoRedirect=false 跟随重定向时跨跳累积 Cookie（跨域仍带回）；空值（P_ck_ctl=）不合并、不序列化。
+// Session.SetCookie 用整串覆盖会话 Cookie（同样跳过空值）。
 // 直连复用 KeepAlive；代理禁用 KeepAlive。仅超时/连接/代理/TLS 及 502/503/504 可重试。
 // Response：GetStatusCode、GetBody、GetBytes、GetLocation、GetSetCookie、GetCookie、GetHeaders、GetHeader、GetUseProxy、GetElapsedMs。
 //

@@ -21,10 +21,11 @@ func parseCookieString(text string) map[string]string {
 		}
 		k, value, ok := strings.Cut(part, "=")
 		k = strings.TrimSpace(k)
-		if k == "" || !ok {
-			continue
+		value = strings.TrimSpace(value)
+		if k == "" || !ok || value == "" {
+			continue // 空值（如 P_ck_ctl=）不写入
 		}
-		result[k] = strings.TrimSpace(value)
+		result[k] = value
 	}
 	return result
 }
@@ -33,6 +34,9 @@ func mergeCookieMaps(parts ...map[string]string) map[string]string {
 	result := make(map[string]string)
 	for _, one := range parts {
 		for k, value := range one {
+			if k == "" || strings.TrimSpace(value) == "" {
+				continue // 空值不覆盖已有键
+			}
 			result[k] = value
 		}
 	}
@@ -44,7 +48,10 @@ func cookieMapToString(m map[string]string) string {
 		return ""
 	}
 	keys := make([]string, 0, len(m))
-	for k := range m {
+	for k, value := range m {
+		if k == "" || strings.TrimSpace(value) == "" {
+			continue
+		}
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
@@ -67,10 +74,11 @@ func cookiesFromResponse(header http.Header) map[string]string {
 			continue
 		}
 		k = strings.TrimSpace(k)
-		if k == "" {
-			continue
+		value = strings.TrimSpace(value)
+		if k == "" || value == "" {
+			continue // 空值 Set-Cookie 不合并
 		}
-		result[k] = strings.TrimSpace(value)
+		result[k] = value
 	}
 	return result
 }

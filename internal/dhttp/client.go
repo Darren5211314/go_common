@@ -96,6 +96,14 @@ func (s *Session) Send(method, url string, opts ...SendOptions) (*Response, erro
 	return s.client.sendInternal(s, method, url, normalizeOptions(opts))
 }
 
+// SetCookie 用整串 Cookie 覆盖会话（a=1; b=2）；空值项跳过。
+func (s *Session) SetCookie(raw string) {
+	parsed := parseCookieString(raw)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Cookie = parsed
+}
+
 // Send 单次请求（无会话粘性）。
 // UseProxy=false 强制直连；=true 且 Proxy 非空 用手动代理；=true 且 Proxy 空 则粘性/池/直连。
 func (c *Client) Send(method, url string, opts ...SendOptions) (*Response, error) {
@@ -230,6 +238,7 @@ func (c *Client) doOnce(session *Session, method, url string, opts SendOptions, 
 		merged = mergeCookieMaps(sessionCookies, reqCookies)
 	}
 	cookieStr := cookieMapToString(merged)
+	jar := mergeCookieMaps(merged) // 跟随重定向过程中累积（已过滤空值）
 
 	var transport http.RoundTripper
 	if strings.TrimSpace(proxy) == "" {
@@ -241,6 +250,26 @@ func (c *Client) doOnce(session *Session, method, url string, opts SendOptions, 
 		}
 		transport = proxyTransport
 	}
+
+	var jarMu sync.Mutex
+	if !opts.NoRedirect {
+		base := transport
+		transport = roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			jarMu.Lock()
+			if s := cookieMapToString(jar); s != "" {
+				req.Header.Set("Cookie", s)
+			}
+			jarMu.Unlock()
+			resp, err := base.RoundTrip(req)
+			if resp != nil {
+				jarMu.Lock()
+				jar = mergeCookieMaps(jar, cookiesFromResponse(resp.Header))
+				jarMu.Unlock()
+			}
+			return resp, err
+		})
+	}
+
 	client := &http.Client{
 		Timeout:   timeout,
 		Transport: transport,
@@ -248,6 +277,21 @@ func (c *Client) doOnce(session *Session, method, url string, opts SendOptions, 
 	if opts.NoRedirect {
 		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
+		}
+	} else {
+		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 10 {
+				return errors.New("stopped after 10 redirects")
+			}
+			// 标准库跨域会剥 Cookie；此处用累积 jar 写回
+			jarMu.Lock()
+			if s := cookieMapToString(jar); s != "" {
+				req.Header.Set("Cookie", s)
+			} else {
+				req.Header.Del("Cookie")
+			}
+			jarMu.Unlock()
+			return nil
 		}
 	}
 
@@ -276,9 +320,9 @@ func (c *Client) doOnce(session *Session, method, url string, opts SendOptions, 
 	}
 	if err != nil {
 		return &Response{
-			useProxy:   proxy,
-			elapsedMs:   elapsed,
-			allCookie: cookieStr,
+			useProxy:  proxy,
+			elapsedMs: elapsed,
+			allCookie: cookieMapToString(jar),
 		}, err
 	}
 	defer httpResp.Body.Close()
@@ -291,10 +335,16 @@ func (c *Client) doOnce(session *Session, method, url string, opts SendOptions, 
 	setCookieStr := cookieMapToString(setCookieMap)
 	all := merged
 	if mergeCookie {
-		all = mergeCookieMaps(merged, setCookieMap)
+		if opts.NoRedirect {
+			all = mergeCookieMaps(merged, setCookieMap)
+		} else {
+			jarMu.Lock()
+			all = mergeCookieMaps(jar)
+			jarMu.Unlock()
+		}
 		if session != nil {
 			session.mu.Lock()
-			session.Cookie = mergeCookieMaps(session.Cookie, setCookieMap)
+			session.Cookie = mergeCookieMaps(all)
 			session.mu.Unlock()
 		}
 	}
@@ -323,6 +373,13 @@ func (c *Client) doOnce(session *Session, method, url string, opts SendOptions, 
 		return result, errors.New("HTTP状态码可重试: " + httpResp.Status)
 	}
 	return result, nil
+}
+
+// roundTripFunc 将函数适配为 RoundTripper（用于重定向过程中维护 Cookie）。
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
 }
 
 func encodeData(data any) ([]byte, string, error) {

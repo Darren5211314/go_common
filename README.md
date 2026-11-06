@@ -47,7 +47,7 @@ func main() {
 ## 约定
 
 - **导出**：标识符用英文 PascalCase（如 `LeftOf`、`Create`）。注释可用中文；参数名可用中文（包内局部）。
-- 命名空间：`Text`、`Time`、`File`、`AES`、`DES`、`DES3`、`SM4`、`Hash`（含 `SM3`）、`HMAC`、`CRC`、`RSA`、`JSON`、`QR`、`IP`、`Proxy`、`Thread`、`HTTP`、`JS`、`Sync`、`Codec`。勿用小写 `string`/`time`/`file`。日志用根包 `darren.Info` / `Warn` / `Error` / `Infof` 等。
+- 命名空间：`Text`、`Time`、`File`、`AES`、`DES`、`DES3`、`SM4`、`Hash`（含 `SM3`）、`HMAC`、`CRC`、`RSA`、`JSON`、`QR`、`IP`、`Proxy`、`Thread`、`HTTP`、`JS`、`Sync`、`Codec`。勿用小写 `string`/`time`/`file`。日志用根包 `darren.Debug` / `Info` / `Warn` / `Error` / `DPanic` / `Panic` / `Fatal` 及对应 `*f`。
 - 字符串按 UTF-8 字符处理，不按字节切。
 - `Find`、`Mid` 的位置从 **1** 起算；找不到返回 `0` / 空串。
 - `Random(位数, 小写字母, 大写字母, 数字)`：三者都为 `false` 时默认小写字母 + 数字。
@@ -63,12 +63,12 @@ func main() {
 - **IP**：`Random` / `Valid` / `Version` / `IsPrivate` / `IsLoopback` / `Local`（网卡局域网）/ `Public(接口) (string, error)`（按编号单源；1=3322 2=gdt 3=qq-checktime 4=pconline 5=ipinfo 6=icanhazip-v4 7=126 8=httpbin 9=ip-api 10=ipip 11=qq-ip2city 12=icanhazip 13=api64-ipify）；地区查询 `LoadDefaultDB()`（`data/ip2region_v4.xdb`）或 `LoadDB(路径)`，再 `Query(ip)`。依赖 `lionsoul2014/ip2region`。
 - **Proxy**：`池 := Proxy.Create()`；`SetProxy` / `SetPoolNum` / `SetVerify` / `SetVerifyTimeout` / `SetTTL` / `SetVerifyWorkers` / `SetGetInterval` / `SetVerifyURL` / `SetProxyType` / `SetLog`；`Start` 后 `GetProxy(waitTime)`（`-1` 无限等，`>=0` 超时秒）；`Stats()`（`LinkCount`/`PoolCount`/`GetCount`/`VerifyOK`/`VerifyFail`/`Verifying`/`Expired`）；`Close`。默认打运行日志，`SetLog(false)` 关闭。
 - **Thread**：`Thread.Create(最大线程数)` → `Start`；`Post`（无返回，爬虫常用）/ `PostTask`（可 `Wait` 结果）；`Pause`/`Resume`；`SetMaxWorkers` 动态扩缩；`Stop` 排空 / `ForceStop` 丢弃排队。
-- **HTTP**：`HTTP.Send` / `HTTP.NewSession` / `HTTP.SetProxyPool`（共用默认客户端）。`SendOptions` 字段：`Data`/`Cookie`/`Headers`/`NoRedirect`/`UseProxy`/`Proxy`/`MaxRetries`/`Timeout`/`CloseMergeCookie`。`MaxRetries`/`Timeout` 未填或 `<=0` 用内置默认（3 / 10s）。`UseProxy=false` 直连；`true`+`Proxy`非空用手动；`true`+空则粘性/池。响应：`GetStatusCode`/`GetBody`/`GetBytes`/`GetLocation`/`GetSetCookie`/`GetCookie`/`GetHeaders`/`GetHeader`/`GetUseProxy`/`GetElapsedMs`。直连复用 KeepAlive；代理禁用 KeepAlive。
+- **HTTP**：`HTTP.Send` / `HTTP.NewSession` / `HTTP.SetProxyPool`（共用默认客户端）。`SendOptions` 字段：`Data`/`Cookie`/`Headers`/`NoRedirect`/`UseProxy`/`Proxy`/`MaxRetries`/`Timeout`/`CloseMergeCookie`。`MaxRetries`/`Timeout` 未填或 `<=0` 用内置默认（3 / 10s）。`UseProxy=false` 直连；`true`+`Proxy`非空用手动；`true`+空则粘性/池。跟随重定向时跨跳合并 Cookie（抗跨域剥头）；空值 Cookie（如 `P_ck_ctl=`）不合并、不写出。`Session.SetCookie(串)` 可注入整串。响应：`GetStatusCode`/`GetBody`/`GetBytes`/`GetLocation`/`GetSetCookie`/`GetCookie`/`GetHeaders`/`GetHeader`/`GetUseProxy`/`GetElapsedMs`。直连复用 KeepAlive；代理禁用 KeepAlive。
 - **JS**：`引擎, _ := JS.Create("goja")`（或 `"v8"`）；`SetVar` / `Eval` / `EvalFile` / `GetString`/`GetInt`/`GetFloat`/`GetBool` / `Close`。单实例内部加锁可并发调用（串行）；高并发请每协程一个引擎。默认 goja（免 CGO，Win/Linux 均可）。V8 依赖 `rogchap.com/v8go`，**仅 Linux/macOS + CGO**；Windows 上请用 goja。注意：当前 `go.mod` 硬依赖 v8go，即使用 goja 也会下载该依赖。
 - **Sync**：`Sync.NewMutex`（`Lock`/`Unlock`/`TryLock`）；`NewRWMutex`（`RLock`/`RUnlock`/`Lock`/`Unlock`/`TryRLock`/`TryLock`）；`NewAtomicInt` / `NewAtomicIntValue`（`Add`/`Sub`/`Get`/`Set`/`CompareAndSwap`）。
 - **Codec**：`URLEncode`/`URLDecode`（query，空格 `%20`）；`Base64Encode`/`Base64Decode`；`Base64URLEncode`/`Base64URLDecode`（RawURL）；`HexEncode`/`HexDecode`（小写）；`IsUTF8`；`ToGBK`/`FromGBK`（返回 `error`）。解码失败返回空串。
 - 命名空间对象一般不保存可变全局状态（`IP.LoadDB` / `LoadDefaultDB`、`Proxy`/`Thread`/`HTTP`/`JS`/`Sync` 实例除外）。
-- **打印输出**：`darren.Info` / `darren.Error` / `darren.Infof`（zap 彩色，自动初始化，带行号，时间 `yyyy-mm-dd hh:mm:ss.SSS`）。不要用 `fmt.Print`。
+- **打印输出**：`Debug`/`Info`/`Warn`/`Error`/`DPanic`/`Panic`/`Fatal` 及 `Debugf`/`Infof`/…（zap 彩色，自动初始化，带行号，时间 `yyyy-mm-dd hh:mm:ss.SSS`）。不要用 `fmt.Print`。
 
 ## 目录与维护
 
