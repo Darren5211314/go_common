@@ -35,7 +35,7 @@ type shFileOpStruct struct {
 	lpszProgressTitle     *uint16
 }
 
-// D删除到回收站 将文件或目录移入 Windows 回收站。
+// Trash 将文件或目录移入 Windows 回收站。
 func moveToTrash(path string) error {
 	path = strings.TrimSpace(path)
 	if path == "" {

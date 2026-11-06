@@ -5,8 +5,8 @@ import (
 	"strings"
 )
 
-// D响应 HTTP 响应封装。
-type D响应 struct {
+// Response HTTP 响应封装。
+type Response struct {
 	statusCode  int
 	body        []byte
 	redirectURL string
@@ -17,49 +17,49 @@ type D响应 struct {
 	elapsedMs   int64
 }
 
-func (r *D响应) GetStatusCode() int {
+func (r *Response) GetStatusCode() int {
 	if r == nil {
 		return 0
 	}
 	return r.statusCode
 }
 
-func (r *D响应) GetBody() string {
+func (r *Response) GetBody() string {
 	if r == nil {
 		return ""
 	}
 	return string(r.body)
 }
 
-func (r *D响应) GetBytes() []byte {
+func (r *Response) GetBytes() []byte {
 	if r == nil {
 		return nil
 	}
 	return r.body
 }
 
-func (r *D响应) GetLocation() string {
+func (r *Response) GetLocation() string {
 	if r == nil {
 		return ""
 	}
 	return r.redirectURL
 }
 
-func (r *D响应) GetSetCookie() string {
+func (r *Response) GetSetCookie() string {
 	if r == nil {
 		return ""
 	}
 	return r.setCookie
 }
 
-func (r *D响应) GetCookie() string {
+func (r *Response) GetCookie() string {
 	if r == nil {
 		return ""
 	}
 	return r.allCookie
 }
 
-func (r *D响应) GetHeaders() map[string][]string {
+func (r *Response) GetHeaders() map[string][]string {
 	if r == nil || r.headers == nil {
 		return map[string][]string{}
 	}
@@ -71,7 +71,7 @@ func (r *D响应) GetHeaders() map[string][]string {
 	return result
 }
 
-func (r *D响应) GetHeader(name string) string {
+func (r *Response) GetHeader(name string) string {
 	if r == nil || r.headers == nil {
 		return ""
 	}
@@ -89,14 +89,14 @@ func (r *D响应) GetHeader(name string) string {
 	return strings.Join(values, ", ")
 }
 
-func (r *D响应) GetUseProxy() string {
+func (r *Response) GetUseProxy() string {
 	if r == nil {
 		return ""
 	}
 	return r.useProxy
 }
 
-func (r *D响应) GetElapsedMs() int64 {
+func (r *Response) GetElapsedMs() int64 {
 	if r == nil {
 		return 0
 	}

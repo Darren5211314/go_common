@@ -75,34 +75,34 @@ func (c *Client) SetProxyPool(pool proxyPool) {
 }
 
 // NewSession 基于当前客户端配置创建会话（Cookie 持久 + 代理粘性）。
-func (c *Client) NewSession() *D会话 {
+func (c *Client) NewSession() *Session {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return &D会话{
+	return &Session{
 		client: c,
 		Cookie: make(map[string]string),
 	}
 }
 
-// D会话 保持 Cookie 与粘性代理（仅记录池代理）。
-type D会话 struct {
+// Session 保持 Cookie 与粘性代理（仅记录池代理）。
+type Session struct {
 	client   *Client
 	mu       sync.Mutex
 	Cookie   map[string]string
 	stickyProxy string
 }
 
-func (s *D会话) Send(method, url string, opts ...SendOptions) (*D响应, error) {
+func (s *Session) Send(method, url string, opts ...SendOptions) (*Response, error) {
 	return s.client.sendInternal(s, method, url, normalizeOptions(opts))
 }
 
 // Send 单次请求（无会话粘性）。
 // UseProxy=false 强制直连；=true 且 Proxy 非空 用手动代理；=true 且 Proxy 空 则粘性/池/直连。
-func (c *Client) Send(method, url string, opts ...SendOptions) (*D响应, error) {
+func (c *Client) Send(method, url string, opts ...SendOptions) (*Response, error) {
 	return c.sendInternal(nil, method, url, normalizeOptions(opts))
 }
 
-func (c *Client) sendInternal(session *D会话, method, url string, opts SendOptions) (*D响应, error) {
+func (c *Client) sendInternal(session *Session, method, url string, opts SendOptions) (*Response, error) {
 	url = strings.TrimSpace(url)
 	if url == "" {
 		return nil, errEmptyURL
@@ -131,7 +131,7 @@ func (c *Client) sendInternal(session *D会话, method, url string, opts SendOpt
 	mergeCookie := !opts.CloseMergeCookie
 
 	var lastErr error
-	var lastResp *D响应
+	var lastResp *Response
 	curProxy := ""
 
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
@@ -181,7 +181,7 @@ func (c *Client) sendInternal(session *D会话, method, url string, opts SendOpt
 }
 
 // 选择代理 返回 (代理URL, 是否来自手动, error)。
-func (c *Client) pickProxy(session *D会话, useProxy bool, manualProxy string, pool proxyPool, curProxy string, timeoutSec int) (string, bool, error) {
+func (c *Client) pickProxy(session *Session, useProxy bool, manualProxy string, pool proxyPool, curProxy string, timeoutSec int) (string, bool, error) {
 	if !useProxy {
 		return "", false, nil
 	}
@@ -210,7 +210,7 @@ func (c *Client) pickProxy(session *D会话, useProxy bool, manualProxy string, 
 	return got, false, err
 }
 
-func (c *Client) doOnce(session *D会话, method, url string, opts SendOptions, timeout time.Duration, mergeCookie bool, proxy string) (*D响应, error) {
+func (c *Client) doOnce(session *Session, method, url string, opts SendOptions, timeout time.Duration, mergeCookie bool, proxy string) (*Response, error) {
 	startTime := time.Now()
 
 	body, contentType, err := encodeData(opts.Data)
@@ -275,7 +275,7 @@ func (c *Client) doOnce(session *D会话, method, url string, opts SendOptions, 
 		elapsed = 1 // 亚毫秒本机请求仍记 1ms，避免 GetElapsedMs 为 0
 	}
 	if err != nil {
-		return &D响应{
+		return &Response{
 			useProxy:   proxy,
 			elapsedMs:   elapsed,
 			allCookie: cookieStr,
@@ -306,7 +306,7 @@ func (c *Client) doOnce(session *D会话, method, url string, opts SendOptions, 
 		redirect = httpResp.Request.URL.String()
 	}
 
-	result := &D响应{
+	result := &Response{
 		statusCode:     httpResp.StatusCode,
 		body:       payload,
 		redirectURL: redirect,
@@ -370,7 +370,7 @@ func isRetryableStatus(code int) bool {
 	return code == 502 || code == 503 || code == 504
 }
 
-func isRetryable(err error, resp *D响应) bool {
+func isRetryable(err error, resp *Response) bool {
 	if err == nil {
 		return false
 	}

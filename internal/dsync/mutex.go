@@ -2,26 +2,26 @@ package dsync
 
 import "sync"
 
-// D互斥锁 有状态互斥锁。
-type D互斥锁 struct {
+// Mutex 有状态互斥锁。
+type Mutex struct {
 	mu sync.Mutex
 }
 
-func newMutex() *D互斥锁 {
-	return &D互斥锁{}
+func newMutex() *Mutex {
+	return &Mutex{}
 }
 
-// D加锁 阻塞获取锁。
-func (m *D互斥锁) D加锁() {
+// Lock 阻塞获取锁。
+func (m *Mutex) Lock() {
 	m.mu.Lock()
 }
 
-// D解锁 释放锁。
-func (m *D互斥锁) D解锁() {
+// Unlock 释放锁。
+func (m *Mutex) Unlock() {
 	m.mu.Unlock()
 }
 
-// D尝试加锁 非阻塞尝试获取锁。
-func (m *D互斥锁) D尝试加锁() bool {
+// TryLock 非阻塞尝试获取锁。
+func (m *Mutex) TryLock() bool {
 	return m.mu.TryLock()
 }

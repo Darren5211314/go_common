@@ -26,8 +26,8 @@ type backend interface {
 	close()
 }
 
-// D引擎 有状态 JS 引擎（内部加锁，多 goroutine 共用会串行，不崩溃）。
-type D引擎 struct {
+// Engine 有状态 JS 引擎（内部加锁，多 goroutine 共用会串行，不崩溃）。
+type Engine struct {
 	mu   sync.Mutex
 	backend  backend
 	closed bool
@@ -35,7 +35,7 @@ type D引擎 struct {
 }
 
 // 新建引擎 按名称创建后端；空或 goja 用 goja；v8 需 CGO。
-func newEngine(engineName string) (*D引擎, error) {
+func newEngine(engineName string) (*Engine, error) {
 	name := strings.ToLower(strings.TrimSpace(engineName))
 	if name == "" {
 		name = "goja"
@@ -55,11 +55,11 @@ func newEngine(engineName string) (*D引擎, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &D引擎{backend: backendInst, name: name}, nil
+	return &Engine{backend: backendInst, name: name}, nil
 }
 
-// D关闭 释放引擎资源。
-func (e *D引擎) D关闭() {
+// Close 释放引擎资源。
+func (e *Engine) Close() {
 	if e == nil {
 		return
 	}
@@ -75,16 +75,16 @@ func (e *D引擎) D关闭() {
 	}
 }
 
-// D引擎名 返回 goja 或 v8。
-func (e *D引擎) D引擎名() string {
+// Name 返回 goja 或 v8。
+func (e *Engine) Name() string {
 	if e == nil {
 		return ""
 	}
 	return e.name
 }
 
-// D执行 执行代码，返回最后表达式的字符串形式。
-func (e *D引擎) D执行(code string) (string, error) {
+// Eval 执行代码，返回最后表达式的字符串形式。
+func (e *Engine) Eval(code string) (string, error) {
 	code = strings.TrimSpace(code)
 	if code == "" {
 		return "", errEmptyCode
@@ -97,8 +97,8 @@ func (e *D引擎) D执行(code string) (string, error) {
 	return e.backend.eval(code)
 }
 
-// D执行文件 读取文件并执行。
-func (e *D引擎) D执行文件(path string) (string, error) {
+// EvalFile 读取文件并执行。
+func (e *Engine) EvalFile(path string) (string, error) {
 	path = strings.TrimSpace(path)
 	if path == "" {
 		return "", errors.New("路径为空")
@@ -107,11 +107,11 @@ func (e *D引擎) D执行文件(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return e.D执行(string(data))
+	return e.Eval(string(data))
 }
 
-// D设置变量 设置全局变量。
-func (e *D引擎) D设置变量(name string, value any) error {
+// SetVar 设置全局变量。
+func (e *Engine) SetVar(name string, value any) error {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return errEmptyVarName
@@ -124,7 +124,7 @@ func (e *D引擎) D设置变量(name string, value any) error {
 	return e.backend.setVar(name, normalizeValue(value))
 }
 
-func (e *D引擎) getRawLocked(name string) (any, error) {
+func (e *Engine) getRawLocked(name string) (any, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return nil, errEmptyVarName
@@ -144,8 +144,8 @@ func (e *D引擎) getRawLocked(name string) (any, error) {
 	return value, nil
 }
 
-// D取文本 读取全局变量为字符串。
-func (e *D引擎) D取文本(name string) (string, error) {
+// GetString 读取全局变量为字符串。
+func (e *Engine) GetString(name string) (string, error) {
 	value, err := e.getRawLocked(name)
 	if err != nil {
 		return "", err
@@ -160,8 +160,8 @@ func (e *D引擎) D取文本(name string) (string, error) {
 	}
 }
 
-// D取整数 读取全局变量为 int64。
-func (e *D引擎) D取整数(name string) (int64, error) {
+// GetInt 读取全局变量为 int64。
+func (e *Engine) GetInt(name string) (int64, error) {
 	value, err := e.getRawLocked(name)
 	if err != nil {
 		return 0, err
@@ -182,8 +182,8 @@ func (e *D引擎) D取整数(name string) (int64, error) {
 	}
 }
 
-// D取小数 读取全局变量为 float64。
-func (e *D引擎) D取小数(name string) (float64, error) {
+// GetFloat 读取全局变量为 float64。
+func (e *Engine) GetFloat(name string) (float64, error) {
 	value, err := e.getRawLocked(name)
 	if err != nil {
 		return 0, err
@@ -202,8 +202,8 @@ func (e *D引擎) D取小数(name string) (float64, error) {
 	}
 }
 
-// D取逻辑 读取全局变量为 bool。
-func (e *D引擎) D取逻辑(name string) (bool, error) {
+// GetBool 读取全局变量为 bool。
+func (e *Engine) GetBool(name string) (bool, error) {
 	value, err := e.getRawLocked(name)
 	if err != nil {
 		return false, err

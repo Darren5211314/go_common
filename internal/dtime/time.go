@@ -119,7 +119,7 @@ func parseTimeText(text string) (time.Time, bool) {
 	return time.Time{}, false
 }
 
-// D取现行时间戳 取十位为 true 返回秒级（约 10 位），为 false 返回毫秒级（约 13 位）。
+// Now 取十位为 true 返回秒级（约 10 位），为 false 返回毫秒级（约 13 位）。
 // 调用时传 false 即「默认」13 位。
 func nowTimestamp(tenDigits bool) int64 {
 	if tenDigits {
@@ -128,14 +128,14 @@ func nowTimestamp(tenDigits bool) int64 {
 	return time.Now().UnixMilli()
 }
 
-// D时间戳转时间 将时间戳按本地时区格式化为文本。
+// FormatUnix 将时间戳按本地时区格式化为文本。
 // 自动识别：绝对值大于等于 1e12 按毫秒，否则按秒。
 // 格式使用通配符，例如 yyyy-mm-dd hh:mm:ss。
 func timestampFormat(ts int64, format string) string {
 	return timestampToTime(ts).Format(patternToLayout(format))
 }
 
-// D时间转时间戳 自动识别时间文本格式并转为时间戳。
+// ParseUnix 自动识别时间文本格式并转为时间戳。
 // 取十位为 true 返回秒，为 false 返回毫秒；解析失败返回 0。
 func timeToTimestamp(timeText string, tenDigits bool) int64 {
 	t, ok := parseTimeText(timeText)
@@ -148,7 +148,7 @@ func timeToTimestamp(timeText string, tenDigits bool) int64 {
 	return t.UnixMilli()
 }
 
-// D时间格式化 将时间文本格式化为目标通配符格式。
+// Format 将时间文本格式化为目标通配符格式。
 // 输入格式自动识别；时间文本为空时使用现行时间；解析失败返回空字符串。
 func formatTime(timeText, targetLayout string) string {
 	var t time.Time
@@ -164,7 +164,7 @@ func formatTime(timeText, targetLayout string) string {
 	return t.Format(patternToLayout(targetLayout))
 }
 
-// D延时 阻塞当前协程指定毫秒；毫秒 <= 0 时立即返回。
+// Sleep 阻塞当前协程指定毫秒；毫秒 <= 0 时立即返回。
 func sleepMs(ms int) {
 	if ms <= 0 {
 		return

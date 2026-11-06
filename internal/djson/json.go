@@ -72,13 +72,13 @@ func compactEncode(value any) (string, error) {
 	return string(data), nil
 }
 
-// D是否有效 判断文本是否为合法 JSON。
+// Valid 判断文本是否为合法 JSON。
 func isValidIP(text string) bool {
 	_, err := parse(text)
 	return err == nil
 }
 
-// D是否存在 判断路径是否存在。
+// Has 判断路径是否存在。
 func existsAt(text, path string) bool {
 	root, err := parse(text)
 	if err != nil {
@@ -88,7 +88,7 @@ func existsAt(text, path string) bool {
 	return exists
 }
 
-// D取成员数 返回对象字段数或数组长度；路径空则对根取值；无效返回 0。
+// Count 返回对象字段数或数组长度；路径空则对根取值；无效返回 0。
 func memberCount(text, path string) int {
 	root, err := parse(text)
 	if err != nil {
@@ -108,7 +108,7 @@ func memberCount(text, path string) int {
 	}
 }
 
-// D取文本 取路径对应值并转为文本；找不到返回空串。
+// GetString 取路径对应值并转为文本；找不到返回空串。
 func getText(text, path string) string {
 	root, err := parse(text)
 	if err != nil {
@@ -139,7 +139,7 @@ func getText(text, path string) string {
 	}
 }
 
-// D取整数 取路径对应整数；找不到或非数字返回 0。
+// GetInt 取路径对应整数；找不到或非数字返回 0。
 func getInt(text, path string) int64 {
 	root, err := parse(text)
 	if err != nil {
@@ -182,7 +182,7 @@ func getInt(text, path string) int64 {
 	}
 }
 
-// D取小数 取路径对应浮点数；找不到或非数字返回 0。
+// GetFloat 取路径对应浮点数；找不到或非数字返回 0。
 func getFloat(text, path string) float64 {
 	root, err := parse(text)
 	if err != nil {
@@ -217,7 +217,7 @@ func getFloat(text, path string) float64 {
 	}
 }
 
-// D取逻辑 取路径对应布尔；找不到返回 false。数字非 0 视为 true；文本 "true"/"1" 为 true。
+// GetBool 取路径对应布尔；找不到返回 false。数字非 0 视为 true；文本 "true"/"1" 为 true。
 func getBool(text, path string) bool {
 	root, err := parse(text)
 	if err != nil {
@@ -246,7 +246,7 @@ func getBool(text, path string) bool {
 	}
 }
 
-// D取JSON 取路径对应子树的紧凑 JSON；找不到返回空串。
+// GetJSON 取路径对应子树的紧凑 JSON；找不到返回空串。
 func getJSON(text, path string) string {
 	root, err := parse(text)
 	if err != nil {
@@ -362,27 +362,27 @@ func setAndEncode(text, path string, newVal any) (string, error) {
 	return compactEncode(newRoot)
 }
 
-// D设置文本 设置路径为字符串。
+// SetString 设置路径为字符串。
 func setText(text, path, value string) (string, error) {
 	return setAndEncode(text, path, value)
 }
 
-// D设置整数 设置路径为整数。
+// SetInt 设置路径为整数。
 func setInt(text, path string, value int64) (string, error) {
 	return setAndEncode(text, path, value)
 }
 
-// D设置小数 设置路径为小数。
+// SetFloat 设置路径为小数。
 func setFloat(text, path string, value float64) (string, error) {
 	return setAndEncode(text, path, value)
 }
 
-// D设置逻辑 设置路径为布尔。
+// SetBool 设置路径为布尔。
 func setBool(text, path string, value bool) (string, error) {
 	return setAndEncode(text, path, value)
 }
 
-// D设置JSON 设置路径为 JSON 片段（须可解析）。
+// SetJSON 设置路径为 JSON 片段（须可解析）。
 func setJSON(text, path, jsonFrag string) (string, error) {
 	value, err := parse(jsonFrag)
 	if err != nil {
@@ -391,7 +391,7 @@ func setJSON(text, path, jsonFrag string) (string, error) {
 	return setAndEncode(text, path, value)
 }
 
-// D压缩 去掉空白，非法返回空串。
+// Compact 去掉空白，非法返回空串。
 func compact(text string) string {
 	var buf bytes.Buffer
 	if err := json.Compact(&buf, []byte(text)); err != nil {
@@ -400,7 +400,7 @@ func compact(text string) string {
 	return buf.String()
 }
 
-// D格式化 缩进 2 空格美化，非法返回空串。
+// Pretty 缩进 2 空格美化，非法返回空串。
 func pretty(text string) string {
 	var buf bytes.Buffer
 	if err := json.Indent(&buf, []byte(text), "", "  "); err != nil {

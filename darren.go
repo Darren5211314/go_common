@@ -44,22 +44,22 @@ type codecNS = dcodec.CodecNS
 
 // 有状态类型别名（调用方需要写类型名）。
 
-type D代理池 = dproxy.D代理池
-type D代理统计 = dproxy.D代理统计
+type ProxyPool = dproxy.ProxyPool
+type ProxyStats = dproxy.ProxyStats
 
-type D线程池 = dthread.D线程池
-type D线程池统计 = dthread.D线程池统计
-type D任务 = dthread.D任务
+type ThreadPool = dthread.ThreadPool
+type ThreadStats = dthread.ThreadStats
+type Task = dthread.Task
 
-type D会话 = dhttp.D会话
-type D响应 = dhttp.D响应
+type Session = dhttp.Session
+type Response = dhttp.Response
 type SendOptions = dhttp.SendOptions
 
-type D引擎 = djs.D引擎
+type Engine = djs.Engine
 
-type D互斥锁 = dsync.D互斥锁
-type D读写锁 = dsync.D读写锁
-type D原子计数 = dsync.D原子计数
+type Mutex = dsync.Mutex
+type RWMutex = dsync.RWMutex
+type AtomicInt = dsync.AtomicInt
 
 // 命名空间入口。
 

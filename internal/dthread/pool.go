@@ -17,26 +17,26 @@ var (
 	errTaskCanceled = errors.New("任务已取消")
 )
 
-// D线程池统计 瞬时与累计统计。
-type D线程池统计 struct {
-	D最大线程数 int
-	D执行中数量 int
-	D空闲数量   int
-	D排队数量   int
-	D已完成数   int64
-	D失败数     int64
-	D已投递数   int64
+// ThreadStats 瞬时与累计统计。
+type ThreadStats struct {
+	MaxWorkers int
+	Running int
+	Idle   int
+	Queued   int
+	Done   int64
+	Fail     int64
+	Posted   int64
 }
 
-// D任务 可等待结果的任务句柄。
-type D任务 struct {
+// Task 可等待结果的任务句柄。
+type Task struct {
 	done   chan struct{}
 	result   any
 	err   error
 	doneOnce sync.Once
 }
 
-func (t *D任务) finish(result any, err error) {
+func (t *Task) finish(result any, err error) {
 	t.doneOnce.Do(func() {
 		t.result = result
 		t.err = err
@@ -44,8 +44,8 @@ func (t *D任务) finish(result any, err error) {
 	})
 }
 
-// D等待 阻塞直到任务完成。
-func (t *D任务) D等待() (any, error) {
+// Wait 阻塞直到任务完成。
+func (t *Task) Wait() (any, error) {
 	if t == nil {
 		return nil, errNilTask
 	}
@@ -53,13 +53,13 @@ func (t *D任务) D等待() (any, error) {
 	return t.result, t.err
 }
 
-// D等待超时 最多等待秒数；超时返回错误。
-func (t *D任务) D等待超时(sec int) (any, error) {
+// WaitTimeout 最多等待秒数；超时返回错误。
+func (t *Task) WaitTimeout(sec int) (any, error) {
 	if t == nil {
 		return nil, errNilTask
 	}
 	if sec < 0 {
-		return t.D等待()
+		return t.Wait()
 	}
 	choice := time.NewTimer(time.Duration(sec) * time.Second)
 	defer choice.Stop()
@@ -74,11 +74,11 @@ func (t *D任务) D等待超时(sec int) (any, error) {
 type internalTask struct {
 	noResult func()
 	withResult func() (any, error)
-	handle   *D任务
+	handle   *Task
 }
 
-// D线程池 可伸缩 worker 池。
-type D线程池 struct {
+// ThreadPool 可伸缩 worker 池。
+type ThreadPool struct {
 	mu sync.Mutex
 
 	maxWorkers int
@@ -108,14 +108,14 @@ type D线程池 struct {
 	Failed   atomic.Int64
 }
 
-// D新建 创建线程池；最大线程数 <=0 时为 1。默认队列容量 = 最大*4。
-func newClient(maxWorkers int) *D线程池 {
+// Create 创建线程池；最大线程数 <=0 时为 1。默认队列容量 = 最大*4。
+func newClient(maxWorkers int) *ThreadPool {
 	if maxWorkers <= 0 {
 		maxWorkers = 1
 	}
 	submitCtx, submitCancel := context.WithCancel(context.Background())
 	taskCtx, taskCanceled := context.WithCancel(context.Background())
-	p := &D线程池{
+	p := &ThreadPool{
 		maxWorkers: maxWorkers,
 		queueCap: maxWorkers * 4,
 		submitCtx: submitCtx,
@@ -127,8 +127,8 @@ func newClient(maxWorkers int) *D线程池 {
 	return p
 }
 
-// D设置队列容量 仅启动前有效。
-func (p *D线程池) D设置队列容量(capacity int) {
+// SetQueueSize 仅启动前有效。
+func (p *ThreadPool) SetQueueSize(capacity int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.started {
@@ -140,15 +140,15 @@ func (p *D线程池) D设置队列容量(capacity int) {
 	p.queueCap = capacity
 }
 
-// D任务上下文 返回任务 context（仅强制停止时 cancel）。
-func (p *D线程池) D任务上下文() context.Context {
+// TaskContext 返回任务 context（仅强制停止时 cancel）。
+func (p *ThreadPool) TaskContext() context.Context {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.taskCtx
 }
 
-// D启动 启动 worker。
-func (p *D线程池) D启动() error {
+// Start 启动 worker。
+func (p *ThreadPool) Start() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.stopped {
@@ -166,14 +166,14 @@ func (p *D线程池) D启动() error {
 	return nil
 }
 
-func (p *D线程池) startWorkersLocked() {
+func (p *ThreadPool) startWorkersLocked() {
 	p.liveWorkers++
 	p.workerWait.Add(1)
 	go p.workerLoop()
 }
 
-// D设置最大线程数 动态扩缩。
-func (p *D线程池) D设置最大线程数(count int) {
+// SetMaxWorkers 动态扩缩。
+func (p *ThreadPool) SetMaxWorkers(count int) {
 	if count <= 0 {
 		count = 1
 	}
@@ -189,20 +189,20 @@ func (p *D线程池) D设置最大线程数(count int) {
 	p.pauseCond.Broadcast()
 }
 
-func (p *D线程池) D暂停() {
+func (p *ThreadPool) Pause() {
 	p.mu.Lock()
 	p.paused = true
 	p.mu.Unlock()
 }
 
-func (p *D线程池) D继续() {
+func (p *ThreadPool) Resume() {
 	p.mu.Lock()
 	p.paused = false
 	p.pauseCond.Broadcast()
 	p.mu.Unlock()
 }
 
-func (p *D线程池) canSubmitLocked() error {
+func (p *ThreadPool) canSubmitLocked() error {
 	if !p.started {
 		return errNotStarted
 	}
@@ -212,7 +212,7 @@ func (p *D线程池) canSubmitLocked() error {
 	return nil
 }
 
-func (p *D线程池) submitInternal(item *internalTask) error {
+func (p *ThreadPool) submitInternal(item *internalTask) error {
 	p.mu.Lock()
 	if err := p.canSubmitLocked(); err != nil {
 		p.mu.Unlock()
@@ -231,20 +231,20 @@ func (p *D线程池) submitInternal(item *internalTask) error {
 	}
 }
 
-// D投递 投递无返回值任务；队列满时阻塞。
-func (p *D线程池) D投递(task func()) error {
+// Post 投递无返回值任务；队列满时阻塞。
+func (p *ThreadPool) Post(task func()) error {
 	if task == nil {
 		return errNilTask
 	}
 	return p.submitInternal(&internalTask{noResult: task})
 }
 
-// D投递任务 投递有返回值任务，返回可等待句柄。
-func (p *D线程池) D投递任务(task func() (any, error)) (*D任务, error) {
+// PostTask 投递有返回值任务，返回可等待句柄。
+func (p *ThreadPool) PostTask(task func() (any, error)) (*Task, error) {
 	if task == nil {
 		return nil, errNilTask
 	}
-	handle := &D任务{done: make(chan struct{})}
+	handle := &Task{done: make(chan struct{})}
 	if err := p.submitInternal(&internalTask{withResult: task, handle: handle}); err != nil {
 		handle.finish(nil, err)
 		return handle, err
@@ -252,13 +252,13 @@ func (p *D线程池) D投递任务(task func() (any, error)) (*D任务, error) {
 	return handle, nil
 }
 
-func (p *D线程池) D取执行中数量() int {
+func (p *ThreadPool) RunningCount() int {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.running
 }
 
-func (p *D线程池) D取空闲数量() int {
+func (p *ThreadPool) IdleCount() int {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	idle := p.liveWorkers - p.running
@@ -268,7 +268,7 @@ func (p *D线程池) D取空闲数量() int {
 	return idle
 }
 
-func (p *D线程池) D取排队数量() int {
+func (p *ThreadPool) QueueCount() int {
 	p.mu.Lock()
 	queue := p.queue
 	p.mu.Unlock()
@@ -278,7 +278,7 @@ func (p *D线程池) D取排队数量() int {
 	return len(queue)
 }
 
-func (p *D线程池) D取统计() D线程池统计 {
+func (p *ThreadPool) Stats() ThreadStats {
 	p.mu.Lock()
 	max := p.maxWorkers
 	running := p.running
@@ -293,18 +293,18 @@ func (p *D线程池) D取统计() D线程池统计 {
 	if idle < 0 {
 		idle = 0
 	}
-	return D线程池统计{
-		D最大线程数: max,
-		D执行中数量: running,
-		D空闲数量:   idle,
-		D排队数量:   queued,
-		D已完成数:   p.Completed.Load(),
-		D失败数:     p.Failed.Load(),
-		D已投递数:   p.Submitted.Load(),
+	return ThreadStats{
+		MaxWorkers: max,
+		Running: running,
+		Idle:   idle,
+		Queued:   queued,
+		Done:   p.Completed.Load(),
+		Fail:     p.Failed.Load(),
+		Posted:   p.Submitted.Load(),
 	}
 }
 
-func (p *D线程池) waitDrain() {
+func (p *ThreadPool) waitDrain() {
 	for {
 		p.mu.Lock()
 		queued := 0
@@ -320,7 +320,7 @@ func (p *D线程池) waitDrain() {
 	}
 }
 
-func (p *D线程池) signalWorkersAndWait() {
+func (p *ThreadPool) signalWorkersAndWait() {
 	p.mu.Lock()
 	if p.quitCh != nil {
 		choice := p.quitCh
@@ -332,8 +332,8 @@ func (p *D线程池) signalWorkersAndWait() {
 	p.workerWait.Wait()
 }
 
-// D停止 拒绝新投递，排空队列并等待执行中结束。
-func (p *D线程池) D停止() {
+// Stop 拒绝新投递，排空队列并等待执行中结束。
+func (p *ThreadPool) Stop() {
 	p.mu.Lock()
 	if !p.started || p.stopped {
 		p.mu.Unlock()
@@ -350,8 +350,8 @@ func (p *D线程池) D停止() {
 	p.signalWorkersAndWait()
 }
 
-// D强制停止 拒绝新投递，丢弃排队任务，等待当前执行中结束。
-func (p *D线程池) D强制停止() {
+// ForceStop 拒绝新投递，丢弃排队任务，等待当前执行中结束。
+func (p *ThreadPool) ForceStop() {
 	p.mu.Lock()
 	if !p.started || p.stopped {
 		p.mu.Unlock()
@@ -395,7 +395,7 @@ func (p *D线程池) D强制停止() {
 	p.signalWorkersAndWait()
 }
 
-func (p *D线程池) workerLoop() {
+func (p *ThreadPool) workerLoop() {
 	defer p.workerWait.Done()
 	for {
 		p.mu.Lock()
@@ -460,7 +460,7 @@ func (p *D线程池) workerLoop() {
 	}
 }
 
-func (p *D线程池) runOne(item *internalTask) (fail bool) {
+func (p *ThreadPool) runOne(item *internalTask) (fail bool) {
 	defer func() {
 		if resume := recover(); resume != nil {
 			fail = true

@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// D删除到回收站 按 XDG Trash 规范移入 ~/.local/share/Trash。
+// Trash 按 XDG Trash 规范移入 ~/.local/share/Trash。
 func moveToTrash(path string) error {
 	path = strings.TrimSpace(path)
 	if path == "" {

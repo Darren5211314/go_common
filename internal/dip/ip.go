@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	errNotLoaded = errors.New("ip2region数据未加载，请先调用D加载数据文件")
+	errNotLoaded = errors.New("ip2region数据未加载，请先调用LoadDB")
 	searchMu   sync.RWMutex
 	searcher   *xdb.Searcher
 )
@@ -23,12 +23,12 @@ func parseIP(text string) net.IP {
 	return net.ParseIP(text)
 }
 
-// D是否有效 判断是否为合法 IPv4/IPv6。
+// Valid 判断是否为合法 IPv4/IPv6。
 func isValidIP(text string) bool {
 	return parseIP(text) != nil
 }
 
-// D取版本 返回 "IPv4" / "IPv6"；非法返回空串。
+// Version 返回 "IPv4" / "IPv6"；非法返回空串。
 func ipVersion(text string) string {
 	ip := parseIP(text)
 	if ip == nil {
@@ -40,7 +40,7 @@ func ipVersion(text string) string {
 	return "IPv6"
 }
 
-// D是否私有 判断是否为私有地址；非法返回 false。
+// IsPrivate 判断是否为私有地址；非法返回 false。
 func isPrivate(text string) bool {
 	ip := parseIP(text)
 	if ip == nil {
@@ -49,7 +49,7 @@ func isPrivate(text string) bool {
 	return ip.IsPrivate()
 }
 
-// D是否回环 判断是否为回环地址；非法返回 false。
+// IsLoopback 判断是否为回环地址；非法返回 false。
 func isLoopback(text string) bool {
 	ip := parseIP(text)
 	if ip == nil {
@@ -77,7 +77,7 @@ func isUsablePublicIPv4(ip net.IP) bool {
 	return true
 }
 
-// D取随机IP 生成随机公网风格 IPv4 字符串。
+// Random 生成随机公网风格 IPv4 字符串。
 func randomIP() string {
 	buf := make([]byte, 4)
 	for {
@@ -91,7 +91,7 @@ func randomIP() string {
 	}
 }
 
-// D取本机IP 返回第一个非回环、非 link-local 的 IPv4；没有则 ""。
+// Local 返回第一个非回环、非 link-local 的 IPv4；没有则 ""。
 func localIP() string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
@@ -156,7 +156,7 @@ func loadDefaultXDB() error {
 	return fmt.Errorf("未找到 ip2region 数据文件，已尝试: %s", strings.Join(try, ", "))
 }
 
-// D查询 按已加载的 xdb 查询地区字符串；未加载或失败返回 error；未命中返回 ""。
+// Query 按已加载的 xdb 查询地区字符串；未加载或失败返回 error；未命中返回 ""。
 func query(ipText string) (string, error) {
 	searchMu.RLock()
 	cur := searcher

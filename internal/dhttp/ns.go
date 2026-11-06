@@ -4,7 +4,7 @@ package dhttp
 type HTTPNS struct{}
 
 // Send 使用默认客户端发送；选项可省略（超时/重试未填则用内置默认 10s / 3 次）。
-func (HTTPNS) Send(method, url string, opts ...SendOptions) (*D响应, error) {
+func (HTTPNS) Send(method, url string, opts ...SendOptions) (*Response, error) {
 	return defaultClient().Send(method, url, opts...)
 }
 
@@ -14,6 +14,6 @@ func (HTTPNS) SetProxyPool(pool proxyPool) {
 }
 
 // NewSession 基于默认客户端创建会话。
-func (HTTPNS) NewSession() *D会话 {
+func (HTTPNS) NewSession() *Session {
 	return defaultClient().NewSession()
 }

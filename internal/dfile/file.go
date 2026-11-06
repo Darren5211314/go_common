@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// D删除文件 永久删除文件或目录（目录非空时递归删除）。
+// Delete 永久删除文件或目录（目录非空时递归删除）。
 func deleteFile(path string) error {
 	path = strings.TrimSpace(path)
 	if path == "" {
@@ -25,7 +25,7 @@ func deleteFile(path string) error {
 	return os.Remove(path)
 }
 
-// D移动文件 移动文件或目录到目标路径；目标父目录自动创建。
+// Move 移动文件或目录到目标路径；目标父目录自动创建。
 // 同盘用 Rename；跨盘失败则复制后删除源（仅普通文件可跨盘回退）。
 func moveFile(src, dst string) error {
 	src = strings.TrimSpace(src)
@@ -52,7 +52,7 @@ func moveFile(src, dst string) error {
 	return os.Remove(src)
 }
 
-// D复制文件 复制普通文件到目标；目标父目录自动创建；覆盖已存在目标。
+// Copy 复制普通文件到目标；目标父目录自动创建；覆盖已存在目标。
 func copyFile(src, dst string) error {
 	src = strings.TrimSpace(src)
 	dst = strings.TrimSpace(dst)
@@ -87,7 +87,7 @@ func copyFile(src, dst string) error {
 	return outFile.Sync()
 }
 
-// D重命名 重命名或移动路径（同 os.Rename）。
+// Rename 重命名或移动路径（同 os.Rename）。
 func renamePath(oldPath, newPath string) error {
 	oldPath = strings.TrimSpace(oldPath)
 	newPath = strings.TrimSpace(newPath)
@@ -100,12 +100,12 @@ func renamePath(oldPath, newPath string) error {
 	return os.Rename(oldPath, newPath)
 }
 
-// D取扩展名 返回含点扩展名，如 ".txt"；无则 ""。
+// Ext 返回含点扩展名，如 ".txt"；无则 ""。
 func getExt(path string) string {
 	return filepath.Ext(path)
 }
 
-// D文件是否存在 路径存在且为普通文件（非目录）时为 true。
+// Exists 路径存在且为普通文件（非目录）时为 true。
 func fileExists(path string) bool {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -114,7 +114,7 @@ func fileExists(path string) bool {
 	return !info.IsDir()
 }
 
-// D目录是否存在 路径存在且为目录时为 true。
+// DirExists 路径存在且为目录时为 true。
 func dirExists(path string) bool {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -123,7 +123,7 @@ func dirExists(path string) bool {
 	return info.IsDir()
 }
 
-// D取文件名 取路径最后一段；带扩展名=false 时去掉扩展名。
+// Name 取路径最后一段；带扩展名=false 时去掉扩展名。
 func getFileName(path string, withExt bool) string {
 	name := filepath.Base(path)
 	if withExt {

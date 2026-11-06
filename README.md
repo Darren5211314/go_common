@@ -16,13 +16,13 @@ package main
 import "github.com/Darren5211314/go_common"
 
 func main() {
-	左边 := darren.Text.D取文本左边("abc_123", "_")
-	右边 := darren.Text.D取文本右边("abc_123", "_")
-	前两字 := darren.Text.D取左边("你好世界", 2)
-	位置 := darren.Text.D寻找文本("你好世界", "世界") // 从 1 起算，结果为 3
-	验证码 := darren.Text.D取随机字符(6, false, false, false) // 默认小写+数字
-	戳 := darren.Time.D取现行时间戳(false) // false=13位毫秒，true=10位秒
-	文本 := darren.Time.D时间戳转时间(戳, "yyyy-mm-dd hh:mm:ss")
+	左边 := darren.Text.LeftOf("abc_123", "_")
+	右边 := darren.Text.RightOf("abc_123", "_")
+	前两字 := darren.Text.Left("你好世界", 2)
+	位置 := darren.Text.Find("你好世界", "世界") // 从 1 起算，结果为 3
+	验证码 := darren.Text.Random(6, false, false, false) // 默认小写+数字
+	戳 := darren.Time.Now(false) // false=13位毫秒，true=10位秒
+	文本 := darren.Time.FormatUnix(戳, "yyyy-mm-dd hh:mm:ss")
 	摘要 := darren.Hash.MD5("abc")
 	密钥 := "00112233445566778899aabbccddeeff"
 	IV := "0102030405060708090a0b0c0d0e0f10"
@@ -46,29 +46,28 @@ func main() {
 
 ## 约定
 
-- **导出名前缀 `D`**：Go 规定跨包可见的标识符必须首字母为大写拉丁字母；纯中文无法导出，因此中文方法统一写成 `D取文本左边` 等。
-- 命名空间：英文入口 `Text`、`Time`、`File`、`AES`、`DES`、`DES3`、`SM4`、`Hash`（含 `SM3`）、`HMAC`、`CRC`、`RSA`、`JSON`、`QR`、`IP`、`Proxy`、`Thread`、`HTTP`、`JS`、`Sync`、`Codec`（多数方法仍中文加 `D`）。勿用小写 `string`/`time`/`file`（无法导出且与内置/标准库冲突）。日志用根包 `darren.Info` / `Warn` / `Error` / `Infof` 等。
-- 注释使用中文；参数名可用中文（包内局部，不必加 D）。
+- **导出**：标识符用英文 PascalCase（如 `LeftOf`、`Create`）。注释可用中文；参数名可用中文（包内局部）。
+- 命名空间：`Text`、`Time`、`File`、`AES`、`DES`、`DES3`、`SM4`、`Hash`（含 `SM3`）、`HMAC`、`CRC`、`RSA`、`JSON`、`QR`、`IP`、`Proxy`、`Thread`、`HTTP`、`JS`、`Sync`、`Codec`。勿用小写 `string`/`time`/`file`。日志用根包 `darren.Info` / `Warn` / `Error` / `Infof` 等。
 - 字符串按 UTF-8 字符处理，不按字节切。
-- `D寻找文本`、`D取文本中间` 的位置从 **1** 起算；找不到返回 `0` / 空串。
-- `D取随机字符(位数, 小写字母, 大写字母, 数字)`：三者都为 `false` 时默认小写字母 + 数字。
+- `Find`、`Mid` 的位置从 **1** 起算；找不到返回 `0` / 空串。
+- `Random(位数, 小写字母, 大写字母, 数字)`：三者都为 `false` 时默认小写字母 + 数字。
 - `Text` 找不到内容或空输入时返回空字符串，不返回 `error`。加解密、HMAC、RSA 返回 `(结果, error)`；Hash/CRC 只返回值。
-- `D取现行时间戳(取十位)`：`true`=秒（约 10 位），`false`=毫秒（约 13 位）。
+- `Now(取十位)`：`true`=秒（约 10 位），`false`=毫秒（约 13 位）。
 - 时间输出格式只用通配符：`yyyy-mm-dd hh:mm:ss`。
-- `D时间戳转时间` 自动识别 10/13 位；`D时间转时间戳(文本, 取十位)` / `D时间格式化(文本, 目标格式)` **自动识别输入**，不必传原格式；空文本格式化=现行时间。
-- `D延时(毫秒)`：阻塞当前协程；`<=0` 立即返回。
-- **File**：`D取文件大小(路径, 单位)`（B/KB/MB/GB/TB，1024 进制）；`D删除文件` / `D删除到回收站`（Windows + Linux Trash）；`D移动文件` / `D复制文件` / `D重命名`；`D取扩展名`（含点）；`D文件是否存在` / `D目录是否存在`；`D取文件名(路径, 带扩展名)`；`D保存文本(路径, 分隔符, ...内容)`（空分隔符默认 `----`，自动建父目录并覆盖）。
+- `FormatUnix` 自动识别 10/13 位；`ParseUnix(文本, 取十位)` / `Format(文本, 目标格式)` **自动识别输入**，不必传原格式；空文本格式化=现行时间。
+- `Sleep(毫秒)`：阻塞当前协程；`<=0` 立即返回。
+- **File**：`Size(路径, 单位)`（B/KB/MB/GB/TB，1024 进制）；`Delete` / `Trash`（Windows + Linux Trash）；`Move` / `Copy` / `Rename`；`Ext`（含点）；`Exists` / `DirExists`；`Name(路径, 带扩展名)`；`SaveText(路径, 分隔符, ...内容)`（空分隔符默认 `----`，自动建父目录并覆盖）。
 - **加解密**：模式写进方法名（`EncryptCBC` / `EncryptECB` / `EncryptGCM`）；密钥、IV/nonce、data、摘要均为十六进制字符串；CBC/ECB 用 PKCS7；GCM 返回「data||tag」hex，nonce 单独传。国密：`Hash.SM3`、`SM4`（128-bit 密钥，CBC/ECB/GCM）；依赖 `github.com/emmansun/gmsm`。
-- **JSON**：路径用点号，数组下标为数字段（`data.user.name`、`data.tags.0`）。取值找不到返回空/`0`/`false`；`D设置*` 返回新字符串并自动创建中间节点；`D压缩` / `D格式化` 非法返回空串。
-- **QR**：`D生成` 返回 PNG Base64；`D生成到文件` 写 PNG；`D解析文件` / `D解析Base64` 读回文本。边长 `<=0` 默认 256；纠错固定 Medium。依赖 `skip2/go-qrcode`、`makiuchi-d/gozxing`。
-- **IP**：`D取随机IP` / `D是否有效` / `D取版本` / `D是否私有` / `D是否回环` / `D取本机IP`（网卡局域网）/ `D取外网IP(接口) (string, error)`（按编号单源；1=3322 2=gdt 3=qq-checktime 4=pconline 5=ipinfo 6=icanhazip-v4 7=126 8=httpbin 9=ip-api 10=ipip 11=qq-ip2city 12=icanhazip 13=api64-ipify）；地区查询 `D加载默认数据文件()`（`data/ip2region_v4.xdb`）或 `D加载数据文件(路径)`，再 `D查询(ip)`。依赖 `lionsoul2014/ip2region`。
-- **Proxy**：`池 := Proxy.D新建()` 有状态实例；配置链接/容量/验证/存活等后 `D启动`；`GetProxy(waitTime)`（`-1` 无限等，`>=0` 超时秒）时剔除过期并按缺口异步补充；支持 http/https/socks5；`D取统计` 看计数；`D关闭` 收尾。运行期默认打日志（拉取/验证/取出）；`D设置输出日志(false)` 可关闭。
-- **Thread**：`Thread.D新建(最大线程数)` → `D启动`；`D投递`（无返回，爬虫常用）/ `D投递任务`（可 `D等待` 结果）；`D暂停`/`D继续`；`D设置最大线程数` 动态扩缩；`D停止` 排空 / `D强制停止` 丢弃排队。
+- **JSON**：路径用点号，数组下标为数字段（`data.user.name`、`data.tags.0`）。取值找不到返回空/`0`/`false`；`SetString`/`SetInt`/… 返回新字符串并自动创建中间节点；`Compact` / `Pretty` 非法返回空串。
+- **QR**：`Generate` 返回 PNG Base64；`GenerateFile` 写 PNG；`ParseFile` / `ParseBase64` 读回文本。边长 `<=0` 默认 256；纠错固定 Medium。依赖 `skip2/go-qrcode`、`makiuchi-d/gozxing`。
+- **IP**：`Random` / `Valid` / `Version` / `IsPrivate` / `IsLoopback` / `Local`（网卡局域网）/ `Public(接口) (string, error)`（按编号单源；1=3322 2=gdt 3=qq-checktime 4=pconline 5=ipinfo 6=icanhazip-v4 7=126 8=httpbin 9=ip-api 10=ipip 11=qq-ip2city 12=icanhazip 13=api64-ipify）；地区查询 `LoadDefaultDB()`（`data/ip2region_v4.xdb`）或 `LoadDB(路径)`，再 `Query(ip)`。依赖 `lionsoul2014/ip2region`。
+- **Proxy**：`池 := Proxy.Create()`；`SetProxy` / `SetPoolNum` / `SetVerify` / `SetVerifyTimeout` / `SetTTL` / `SetVerifyWorkers` / `SetGetInterval` / `SetVerifyURL` / `SetProxyType` / `SetLog`；`Start` 后 `GetProxy(waitTime)`（`-1` 无限等，`>=0` 超时秒）；`Stats()`（`LinkCount`/`PoolCount`/`GetCount`/`VerifyOK`/`VerifyFail`/`Verifying`/`Expired`）；`Close`。默认打运行日志，`SetLog(false)` 关闭。
+- **Thread**：`Thread.Create(最大线程数)` → `Start`；`Post`（无返回，爬虫常用）/ `PostTask`（可 `Wait` 结果）；`Pause`/`Resume`；`SetMaxWorkers` 动态扩缩；`Stop` 排空 / `ForceStop` 丢弃排队。
 - **HTTP**：`HTTP.Send` / `HTTP.NewSession` / `HTTP.SetProxyPool`（共用默认客户端）。`SendOptions` 字段：`Data`/`Cookie`/`Headers`/`NoRedirect`/`UseProxy`/`Proxy`/`MaxRetries`/`Timeout`/`CloseMergeCookie`。`MaxRetries`/`Timeout` 未填或 `<=0` 用内置默认（3 / 10s）。`UseProxy=false` 直连；`true`+`Proxy`非空用手动；`true`+空则粘性/池。响应：`GetStatusCode`/`GetBody`/`GetBytes`/`GetLocation`/`GetSetCookie`/`GetCookie`/`GetHeaders`/`GetHeader`/`GetUseProxy`/`GetElapsedMs`。直连复用 KeepAlive；代理禁用 KeepAlive。
-- **JS**：`引擎, _ := JS.D新建("goja")`（或 `"v8"`）；`D设置变量` / `D执行` / `D执行文件` / `D取文本|整数|小数|逻辑` / `D关闭`。单实例内部加锁可并发调用（串行）；高并发请每协程一个引擎。默认 goja（免 CGO，Win/Linux 均可）。V8 依赖 `rogchap.com/v8go`，**仅 Linux/macOS + CGO**；Windows 上请用 goja。注意：当前 `go.mod` 硬依赖 v8go，即使用 goja 也会下载该依赖。
-- **Sync**：`Sync.D新建互斥锁`（`D加锁`/`D解锁`/`D尝试加锁`）；`D新建读写锁`（读/写加解锁与尝试）；`D新建原子计数` / `D新建原子计数初值`（`D加`/`D减`/`D取`/`D设置`/`D比较交换`）。
-- **Codec**：`D网址编码`/`D网址解码`（query，空格 `%20`）；`DBase64编码`/`DBase64解码`；`DBase64网址编码`/`DBase64网址解码`（RawURL）；`D十六进制编码`/`D十六进制解码`（小写）；`D是否UTF8`；`D到GBK`/`D从GBK`（返回 `error`）。解码失败返回空串。
-- 命名空间对象一般不保存可变全局状态（`IP.D加载数据文件` / `D加载默认数据文件`、`Proxy`/`Thread`/`HTTP`/`JS`/`Sync` 实例除外）。
+- **JS**：`引擎, _ := JS.Create("goja")`（或 `"v8"`）；`SetVar` / `Eval` / `EvalFile` / `GetString`/`GetInt`/`GetFloat`/`GetBool` / `Close`。单实例内部加锁可并发调用（串行）；高并发请每协程一个引擎。默认 goja（免 CGO，Win/Linux 均可）。V8 依赖 `rogchap.com/v8go`，**仅 Linux/macOS + CGO**；Windows 上请用 goja。注意：当前 `go.mod` 硬依赖 v8go，即使用 goja 也会下载该依赖。
+- **Sync**：`Sync.NewMutex`（`Lock`/`Unlock`/`TryLock`）；`NewRWMutex`（`RLock`/`RUnlock`/`Lock`/`Unlock`/`TryRLock`/`TryLock`）；`NewAtomicInt` / `NewAtomicIntValue`（`Add`/`Sub`/`Get`/`Set`/`CompareAndSwap`）。
+- **Codec**：`URLEncode`/`URLDecode`（query，空格 `%20`）；`Base64Encode`/`Base64Decode`；`Base64URLEncode`/`Base64URLDecode`（RawURL）；`HexEncode`/`HexDecode`（小写）；`IsUTF8`；`ToGBK`/`FromGBK`（返回 `error`）。解码失败返回空串。
+- 命名空间对象一般不保存可变全局状态（`IP.LoadDB` / `LoadDefaultDB`、`Proxy`/`Thread`/`HTTP`/`JS`/`Sync` 实例除外）。
 - **打印输出**：`darren.Info` / `darren.Error` / `darren.Infof`（zap 彩色，自动初始化，带行号，时间 `yyyy-mm-dd hh:mm:ss.SSS`）。不要用 `fmt.Print`。
 
 ## 目录与维护

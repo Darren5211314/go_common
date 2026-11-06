@@ -2,41 +2,41 @@ package dsync
 
 import "sync"
 
-// D读写锁 有状态读写锁。
-type D读写锁 struct {
+// RWMutex 有状态读写锁。
+type RWMutex struct {
 	mu sync.RWMutex
 }
 
-func newRWMutex() *D读写锁 {
-	return &D读写锁{}
+func newRWMutex() *RWMutex {
+	return &RWMutex{}
 }
 
-// D读加锁 获取读锁。
-func (m *D读写锁) D读加锁() {
+// RLock 获取读锁。
+func (m *RWMutex) RLock() {
 	m.mu.RLock()
 }
 
-// D读解锁 释放读锁。
-func (m *D读写锁) D读解锁() {
+// RUnlock 释放读锁。
+func (m *RWMutex) RUnlock() {
 	m.mu.RUnlock()
 }
 
-// D写加锁 获取写锁。
-func (m *D读写锁) D写加锁() {
+// Lock 获取写锁。
+func (m *RWMutex) Lock() {
 	m.mu.Lock()
 }
 
-// D写解锁 释放写锁。
-func (m *D读写锁) D写解锁() {
+// Unlock 释放写锁。
+func (m *RWMutex) Unlock() {
 	m.mu.Unlock()
 }
 
-// D尝试读加锁 非阻塞尝试获取读锁。
-func (m *D读写锁) D尝试读加锁() bool {
+// TryRLock 非阻塞尝试获取读锁。
+func (m *RWMutex) TryRLock() bool {
 	return m.mu.TryRLock()
 }
 
-// D尝试写加锁 非阻塞尝试获取写锁。
-func (m *D读写锁) D尝试写加锁() bool {
+// TryLock 非阻塞尝试获取写锁。
+func (m *RWMutex) TryLock() bool {
 	return m.mu.TryLock()
 }

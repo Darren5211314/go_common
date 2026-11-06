@@ -27,7 +27,7 @@ func genPNG(content string, size int) ([]byte, error) {
 	return qrcode.Encode(content, qrcode.Medium, normalizeSize(size))
 }
 
-// D生成 生成二维码 PNG，返回 Base64（无 data: 前缀）。
+// Generate 生成二维码 PNG，返回 Base64（无 data: 前缀）。
 func generate(content string, size int) (string, error) {
 	data, err := genPNG(content, size)
 	if err != nil {
@@ -36,7 +36,7 @@ func generate(content string, size int) (string, error) {
 	return base64.StdEncoding.EncodeToString(data), nil
 }
 
-// D生成到文件 生成二维码 PNG 并写入路径。
+// GenerateFile 生成二维码 PNG 并写入路径。
 func genToFile(content, path string, size int) error {
 	data, err := genPNG(content, size)
 	if err != nil {
@@ -65,7 +65,7 @@ func parseBytes(data []byte) (string, error) {
 	return decodeImage(img)
 }
 
-// D解析文件 从图片文件解析二维码文本（支持 PNG/JPEG 等）。
+// ParseFile 从图片文件解析二维码文本（支持 PNG/JPEG 等）。
 func parseFile(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -74,7 +74,7 @@ func parseFile(path string) (string, error) {
 	return parseBytes(data)
 }
 
-// D解析Base64 从 PNG（等）图片的 Base64 解析二维码文本。
+// ParseBase64 从 PNG（等）图片的 Base64 解析二维码文本。
 func parseBase64(pngBase64 string) (string, error) {
 	text := strings.TrimSpace(pngBase64)
 	if i := strings.Index(text, ","); i >= 0 && strings.Contains(strings.ToLower(text[:i]), "base64") {

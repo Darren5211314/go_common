@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// D取文件大小 按单位返回文件大小（1024 进制）。
+// Size 按单位返回文件大小（1024 进制）。
 // 单位：B/KB/MB/GB/TB（大小写不敏感）；空或非法按 B。
 func getFileSize(path, unit string) (float64, error) {
 	path = strings.TrimSpace(path)

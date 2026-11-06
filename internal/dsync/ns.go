@@ -3,22 +3,22 @@ package dsync
 // SyncNS 并发同步原语工厂命名空间。
 type SyncNS struct{}
 
-// D新建互斥锁 创建互斥锁。
-func (SyncNS) D新建互斥锁() *D互斥锁 {
+// NewMutex 创建互斥锁。
+func (SyncNS) NewMutex() *Mutex {
 	return newMutex()
 }
 
-// D新建读写锁 创建读写锁。
-func (SyncNS) D新建读写锁() *D读写锁 {
+// NewRWMutex 创建读写锁。
+func (SyncNS) NewRWMutex() *RWMutex {
 	return newRWMutex()
 }
 
-// D新建原子计数 创建初值为 0 的原子计数器。
-func (SyncNS) D新建原子计数() *D原子计数 {
+// NewAtomicInt 创建初值为 0 的原子计数器。
+func (SyncNS) NewAtomicInt() *AtomicInt {
 	return newAtomicCounter()
 }
 
-// D新建原子计数初值 创建指定初值的原子计数器。
-func (SyncNS) D新建原子计数初值(initial int64) *D原子计数 {
+// NewAtomicIntValue 创建指定初值的原子计数器。
+func (SyncNS) NewAtomicIntValue(initial int64) *AtomicInt {
 	return newAtomicCounterAt(initial)
 }

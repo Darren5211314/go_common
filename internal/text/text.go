@@ -15,7 +15,7 @@ const (
 	charsetDigit = "0123456789"
 )
 
-// D取文本左边 返回内容中首次出现标记左侧的文本。
+// LeftOf 返回内容中首次出现标记左侧的文本。
 // 标记为空或未找到时返回空字符串。
 func leftText(content, flag string) string {
 	if flag == "" {
@@ -28,7 +28,7 @@ func leftText(content, flag string) string {
 	return content[:pos]
 }
 
-// D取文本右边 返回内容中首次出现标记右侧的文本。
+// RightOf 返回内容中首次出现标记右侧的文本。
 // 标记为空或未找到时返回空字符串。
 func rightText(content, flag string) string {
 	if flag == "" {
@@ -41,7 +41,7 @@ func rightText(content, flag string) string {
 	return content[pos+len(flag):]
 }
 
-// D取左边 按字符数返回内容左侧文本。
+// Left 按字符数返回内容左侧文本。
 // 长度小于等于 0 时返回空字符串；长度超出内容时返回全部内容。
 func left(content string, n int) string {
 	if n <= 0 {
@@ -54,7 +54,7 @@ func left(content string, n int) string {
 	return string(char[:n])
 }
 
-// D取右边 按字符数返回内容右侧文本。
+// Right 按字符数返回内容右侧文本。
 // 长度小于等于 0 时返回空字符串；长度超出内容时返回全部内容。
 func right(content string, n int) string {
 	if n <= 0 {
@@ -68,12 +68,12 @@ func right(content string, n int) string {
 	return string(char[total-n:])
 }
 
-// D取文本长度 返回内容的字符数（按 UTF-8 rune，不按字节）。
+// Len 返回内容的字符数（按 UTF-8 rune，不按字节）。
 func textLen(content string) int {
 	return len([]rune(content))
 }
 
-// D寻找文本 返回子文本在内容中首次出现的字符位置（从 1 起算）。
+// Find 返回子文本在内容中首次出现的字符位置（从 1 起算）。
 // 找不到或子文本为空时返回 0。
 func findText(content, sub string) int {
 	if sub == "" {
@@ -86,22 +86,22 @@ func findText(content, sub string) int {
 	return len([]rune(content[:bytePos])) + 1
 }
 
-// D删首空 去掉内容左侧的空白字符（含空格、制表符、换行、全角空格等）。
+// TrimLeft 去掉内容左侧的空白字符（含空格、制表符、换行、全角空格等）。
 func trimLeftSpace(content string) string {
 	return strings.TrimLeftFunc(content, unicode.IsSpace)
 }
 
-// D删尾空 去掉内容右侧的空白字符（含空格、制表符、换行、全角空格等）。
+// TrimRight 去掉内容右侧的空白字符（含空格、制表符、换行、全角空格等）。
 func trimRightSpace(content string) string {
 	return strings.TrimRightFunc(content, unicode.IsSpace)
 }
 
-// D删首尾空 去掉内容两侧的空白字符（含空格、制表符、换行、全角空格等）；中间空白保留。
+// Trim 去掉内容两侧的空白字符（含空格、制表符、换行、全角空格等）；中间空白保留。
 func trimSpace(content string) string {
 	return strings.TrimSpace(content)
 }
 
-// D删全部空 去掉内容中全部空白字符（含中间）。
+// RemoveSpace 去掉内容中全部空白字符（含中间）。
 func trimAllSpace(content string) string {
 	var result strings.Builder
 	result.Grow(len(content))
@@ -113,7 +113,7 @@ func trimAllSpace(content string) string {
 	return result.String()
 }
 
-// D子文本替换 将内容中全部原文本替换为新文本。
+// Replace 将内容中全部原文本替换为新文本。
 // 原文本为空时原样返回内容。
 func replaceSub(content, rawText, newText string) string {
 	if rawText == "" {
@@ -122,7 +122,7 @@ func replaceSub(content, rawText, newText string) string {
 	return strings.ReplaceAll(content, rawText, newText)
 }
 
-// D取文本中间 从起始位置起按字符截取指定长度（起始位置从 1 起算）。
+// Mid 从起始位置起按字符截取指定长度（起始位置从 1 起算）。
 // 起始位置小于 1 或长度小于等于 0 时返回空字符串；越界则截到末尾。
 func mid(content string, startPos, n int) string {
 	if startPos < 1 || n <= 0 {
@@ -141,7 +141,7 @@ func mid(content string, startPos, n int) string {
 	return string(char[startIndex:endIndex])
 }
 
-// D取文本中间文本 返回左边文本与右边文本之间的内容（取各自首次出现）。
+// Between 返回左边文本与右边文本之间的内容（取各自首次出现）。
 // 左边或右边为空、任一侧未找到时返回空字符串。
 func midText(content, leftStr, rightStr string) string {
 	if leftStr == "" || rightStr == "" {
@@ -195,37 +195,37 @@ func keepMatching(content string, check func(rune) bool) string {
 	return result.String()
 }
 
-// D是否为字母 判断内容是否非空且每个字符都是英文字母（a-z / A-Z）。
+// IsLetter 判断内容是否非空且每个字符都是英文字母（a-z / A-Z）。
 func isLetter(content string) bool {
 	return allMatch(content, letterOK)
 }
 
-// D是否为数字 判断内容是否非空且每个字符都是数字（0-9）。
+// IsDigit 判断内容是否非空且每个字符都是数字（0-9）。
 func isDigit(content string) bool {
 	return allMatch(content, digitOK)
 }
 
-// D是否为汉字 判断内容是否非空且每个字符都是汉字（Unicode Han）。
+// IsHan 判断内容是否非空且每个字符都是汉字（Unicode Han）。
 func isHan(content string) bool {
 	return allMatch(content, hanOK)
 }
 
-// D只取字母 保留内容中的英文字母，其余丢弃。
+// OnlyLetters 保留内容中的英文字母，其余丢弃。
 func lettersOnly(content string) string {
 	return keepMatching(content, letterOK)
 }
 
-// D只取数字 保留内容中的数字字符，其余丢弃。
+// OnlyDigits 保留内容中的数字字符，其余丢弃。
 func digitsOnly(content string) string {
 	return keepMatching(content, digitOK)
 }
 
-// D只取汉字 保留内容中的汉字，其余丢弃。
+// OnlyHan 保留内容中的汉字，其余丢弃。
 func hanOnly(content string) string {
 	return keepMatching(content, hanOK)
 }
 
-// D取随机字符 生成指定位数的随机串。
+// Random 生成指定位数的随机串。
 // 小写字母、大写字母、数字 为字符集开关；三者都为 false 时默认「小写字母 + 数字」。
 // 位数小于等于 0 时返回空字符串。使用 crypto/rand。
 func randomChars(bits int, lowerLetters, upperLetters, digit bool) string {

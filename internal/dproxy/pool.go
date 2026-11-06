@@ -20,15 +20,15 @@ var (
 	errNoLink = errors.New("未设置代理链接")
 )
 
-// D代理统计 代理池运行统计。
-type D代理统计 struct {
-	D从链接获取数 int64
-	D验证成功数   int64
-	D验证失败数   int64
-	D正在验证数   int64
-	D池中可用数   int64
-	D已取出数     int64
-	D失效数       int64
+// ProxyStats 代理池运行统计。
+type ProxyStats struct {
+	LinkCount int64
+	VerifyOK   int64
+	VerifyFail   int64
+	Verifying   int64
+	PoolCount   int64
+	GetCount     int64
+	Expired       int64
 }
 
 type poolEntry struct {
@@ -36,8 +36,8 @@ type poolEntry struct {
 	expireAt time.Time // 零值表示不过期
 }
 
-// D代理池 有状态代理池。
-type D代理池 struct {
+// ProxyPool 有状态代理池。
+type ProxyPool struct {
 	mu   sync.Mutex
 	cond  *sync.Cond
 	closeCh chan struct{}
@@ -61,20 +61,20 @@ type D代理池 struct {
 	entries []poolEntry
 	seen   map[string]struct{} // 池中或验证中
 
-	FetchedFromLink atomic.Int64
+	linkCount  atomic.Int64
 	VerifyOK   atomic.Int64
-	VerifyFail   atomic.Int64
-	Verifying   atomic.Int64
-	Taken     atomic.Int64
-	Expired       atomic.Int64
-	logEnabled    atomic.Bool
+	VerifyFail atomic.Int64
+	Verifying  atomic.Int64
+	getCount   atomic.Int64
+	Expired    atomic.Int64
+	logEnabled atomic.Bool
 
 	wg sync.WaitGroup
 }
 
-// D新建 创建未启动的代理池（带默认配置）。
-func newClient() *D代理池 {
-	p := &D代理池{
+// newPool 创建未启动的代理池（带默认配置）。
+func newPool() *ProxyPool {
+	p := &ProxyPool{
 		closeCh:     make(chan struct{}),
 		refillCh:     make(chan struct{}, 1),
 		capacity:       20,
@@ -93,32 +93,32 @@ func newClient() *D代理池 {
 	return p
 }
 
-// D设置输出日志 控制是否输出拉取/验证/取出等运行日志；默认 true。
-func (p *D代理池) D设置输出日志(enable bool) {
+// SetLog 控制是否输出拉取/验证/取出等运行日志；默认 true。
+func (p *ProxyPool) SetLog(enable bool) {
 	p.logEnabled.Store(enable)
 }
 
-func (p *D代理池) logInfow(msg string, keysAndValues ...any) {
+func (p *ProxyPool) logInfow(msg string, keysAndValues ...any) {
 	if !p.logEnabled.Load() {
 		return
 	}
 	dlog.Sugar().Infow(msg, keysAndValues...)
 }
 
-func (p *D代理池) logWarnw(msg string, keysAndValues ...any) {
+func (p *ProxyPool) logWarnw(msg string, keysAndValues ...any) {
 	if !p.logEnabled.Load() {
 		return
 	}
 	dlog.Sugar().Warnw(msg, keysAndValues...)
 }
 
-func (p *D代理池) D设置代理链接(link string) {
+func (p *ProxyPool) SetProxy(link string) {
 	p.mu.Lock()
 	p.proxyLink = strings.TrimSpace(link)
 	p.mu.Unlock()
 }
 
-func (p *D代理池) D设置代理池容量(capacity int) {
+func (p *ProxyPool) SetPoolNum(capacity int) {
 	if capacity < 1 {
 		capacity = 1
 	}
@@ -128,13 +128,13 @@ func (p *D代理池) D设置代理池容量(capacity int) {
 	p.notifyRefill()
 }
 
-func (p *D代理池) D设置是否验证(verify bool) {
+func (p *ProxyPool) SetVerify(verify bool) {
 	p.mu.Lock()
 	p.verifyEnabled = verify
 	p.mu.Unlock()
 }
 
-func (p *D代理池) D设置验证超时(sec int) {
+func (p *ProxyPool) SetVerifyTimeout(sec int) {
 	if sec <= 0 {
 		sec = 5
 	}
@@ -143,7 +143,7 @@ func (p *D代理池) D设置验证超时(sec int) {
 	p.mu.Unlock()
 }
 
-func (p *D代理池) D设置存活时间(sec int) {
+func (p *ProxyPool) SetTTL(sec int) {
 	p.mu.Lock()
 	if sec <= 0 {
 		p.ttlSec = 0
@@ -153,7 +153,7 @@ func (p *D代理池) D设置存活时间(sec int) {
 	p.mu.Unlock()
 }
 
-func (p *D代理池) D设置验证线程数(count int) {
+func (p *ProxyPool) SetVerifyWorkers(count int) {
 	if count < 1 {
 		count = 1
 	}
@@ -162,7 +162,7 @@ func (p *D代理池) D设置验证线程数(count int) {
 	p.mu.Unlock()
 }
 
-func (p *D代理池) D设置获取间隔(sec int) {
+func (p *ProxyPool) SetGetInterval(sec int) {
 	if sec <= 0 {
 		sec = 3
 	}
@@ -171,13 +171,13 @@ func (p *D代理池) D设置获取间隔(sec int) {
 	p.mu.Unlock()
 }
 
-func (p *D代理池) D设置验证地址(url string) {
+func (p *ProxyPool) SetVerifyURL(url string) {
 	p.mu.Lock()
 	p.verifyURL = strings.TrimSpace(url)
 	p.mu.Unlock()
 }
 
-func (p *D代理池) D设置默认协议(scheme string) {
+func (p *ProxyPool) SetProxyType(scheme string) {
 	scheme, err := normalizeScheme(scheme)
 	if err != nil {
 		scheme = "http"
@@ -187,15 +187,15 @@ func (p *D代理池) D设置默认协议(scheme string) {
 	p.mu.Unlock()
 }
 
-func (p *D代理池) notifyRefill() {
+func (p *ProxyPool) notifyRefill() {
 	select {
 	case p.refillCh <- struct{}{}:
 	default:
 	}
 }
 
-// D启动 启动拉取与验证协程。
-func (p *D代理池) D启动() error {
+// Start 启动拉取与验证协程。
+func (p *ProxyPool) Start() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.closed {
@@ -222,8 +222,8 @@ func (p *D代理池) D启动() error {
 	return nil
 }
 
-// D关闭 停止工作协程并唤醒等待中的获取。
-func (p *D代理池) D关闭() {
+// Close 停止工作协程并唤醒等待中的获取。
+func (p *ProxyPool) Close() {
 	p.mu.Lock()
 	if p.closed {
 		p.mu.Unlock()
@@ -236,7 +236,7 @@ func (p *D代理池) D关闭() {
 	p.wg.Wait()
 }
 
-func (p *D代理池) purgeExpiredLocked(now time.Time) {
+func (p *ProxyPool) purgeExpiredLocked(now time.Time) {
 	newList := p.entries[:0]
 	for _, item := range p.entries {
 		if !item.expireAt.IsZero() && !now.Before(item.expireAt) {
@@ -249,16 +249,16 @@ func (p *D代理池) purgeExpiredLocked(now time.Time) {
 	p.entries = newList
 }
 
-func (p *D代理池) availableLocked() int {
+func (p *ProxyPool) availableLocked() int {
 	return len(p.entries)
 }
 
-func (p *D代理池) needRefillLocked() bool {
+func (p *ProxyPool) needRefillLocked() bool {
 	return p.availableLocked()+int(p.Verifying.Load()) < p.capacity
 }
 
 // GetProxy 取出一个代理；waitTime=-1 一直等，>=0 为超时秒数。
-func (p *D代理池) GetProxy(waitTime int) (string, error) {
+func (p *ProxyPool) GetProxy(waitTime int) (string, error) {
 	deadline := time.Time{}
 	if waitTime >= 0 {
 		deadline = time.Now().Add(time.Duration(waitTime) * time.Second)
@@ -279,7 +279,7 @@ func (p *D代理池) GetProxy(waitTime int) (string, error) {
 			item := p.entries[0]
 			p.entries = p.entries[1:]
 			delete(p.seen, proxyKey(item.proxy))
-			taken := p.Taken.Add(1)
+			taken := p.getCount.Add(1)
 			remain := len(p.entries)
 			if p.needRefillLocked() {
 				p.notifyRefill()
@@ -309,23 +309,23 @@ func (p *D代理池) GetProxy(waitTime int) (string, error) {
 	}
 }
 
-func (p *D代理池) D取统计() D代理统计 {
+func (p *ProxyPool) Stats() ProxyStats {
 	p.mu.Lock()
 	p.purgeExpiredLocked(time.Now())
 	ok := int64(len(p.entries))
 	p.mu.Unlock()
-	return D代理统计{
-		D从链接获取数: p.FetchedFromLink.Load(),
-		D验证成功数:   p.VerifyOK.Load(),
-		D验证失败数:   p.VerifyFail.Load(),
-		D正在验证数:   p.Verifying.Load(),
-		D池中可用数:   ok,
-		D已取出数:     p.Taken.Load(),
-		D失效数:       p.Expired.Load(),
+	return ProxyStats{
+		LinkCount:  p.linkCount.Load(),
+		VerifyOK:   p.VerifyOK.Load(),
+		VerifyFail: p.VerifyFail.Load(),
+		Verifying:  p.Verifying.Load(),
+		PoolCount:  ok,
+		GetCount:   p.getCount.Load(),
+		Expired:    p.Expired.Load(),
 	}
 }
 
-func (p *D代理池) fetchLoop() {
+func (p *ProxyPool) fetchLoop() {
 	defer p.wg.Done()
 	failStreak := 0
 	var lastFetch time.Time
@@ -400,7 +400,7 @@ func minInt(a, b int) int {
 	return b
 }
 
-func (p *D代理池) fetchOnce(link, defaultScheme string, needVerify bool) error {
+func (p *ProxyPool) fetchOnce(link, defaultScheme string, needVerify bool) error {
 	resp, err := p.httpClient.Get(link)
 	if err != nil {
 		return err
@@ -432,7 +432,7 @@ func (p *D代理池) fetchOnce(link, defaultScheme string, needVerify bool) erro
 			break
 		}
 		p.seen[k] = struct{}{}
-		p.FetchedFromLink.Add(1)
+		p.linkCount.Add(1)
 		added++
 		if !needVerify {
 			p.enqueueLocked(proxy)
@@ -466,7 +466,7 @@ func (p *D代理池) fetchOnce(link, defaultScheme string, needVerify bool) erro
 	return nil
 }
 
-func (p *D代理池) enqueueLocked(proxy string) {
+func (p *ProxyPool) enqueueLocked(proxy string) {
 	expired := time.Time{}
 	if p.ttlSec > 0 {
 		expired = time.Now().Add(p.ttlSec)
@@ -475,7 +475,7 @@ func (p *D代理池) enqueueLocked(proxy string) {
 	p.cond.Broadcast()
 }
 
-func (p *D代理池) verifyLoop() {
+func (p *ProxyPool) verifyLoop() {
 	defer p.wg.Done()
 	for {
 		select {
