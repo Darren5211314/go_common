@@ -81,6 +81,7 @@
 // # Codec 约定
 //
 // Codec.URLEncode / URLDecode（query 组件，空格为 %20）；失败解码返回空串。
+// QueryParam(rawURL, key) 取查询参数；支持完整 URL 或纯 a=1&b=2；找不到返回空串。
 // Base64Encode / Base64Decode（StdEncoding）；Base64URLEncode / Base64URLDecode（RawURLEncoding）。
 // HexEncode / HexDecode（小写）；IsUTF8；ToGBK / FromGBK 返回 (结果, error)。
 //

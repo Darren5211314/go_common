@@ -66,7 +66,7 @@ func main() {
 - **HTTP**：`HTTP.Send` / `HTTP.NewSession` / `HTTP.SetProxyPool`（共用默认客户端）。`SendOptions` 字段：`Data`/`Cookie`/`Headers`/`NoRedirect`/`UseProxy`/`Proxy`/`MaxRetries`/`Timeout`/`CloseMergeCookie`。`MaxRetries`/`Timeout` 未填或 `<=0` 用内置默认（3 / 10s）。`UseProxy=false` 直连；`true`+`Proxy`非空用手动；`true`+空则粘性/池。跟随重定向时跨跳合并 Cookie（抗跨域剥头）；空值 Cookie（如 `P_ck_ctl=`）不合并、不写出。`Session.SetCookie(串)` 可注入整串。响应：`GetStatusCode`/`GetBody`/`GetBytes`/`GetLocation`/`GetSetCookie`/`GetCookie`/`GetHeaders`/`GetHeader`/`GetUseProxy`/`GetElapsedMs`。直连复用 KeepAlive；代理禁用 KeepAlive。
 - **JS**：`引擎, _ := JS.Create("goja")`（或 `"v8"`）；`SetVar` / `Eval` / `EvalFile` / `GetString`/`GetInt`/`GetFloat`/`GetBool` / `Close`。单实例内部加锁可并发调用（串行）；高并发请每协程一个引擎。默认 goja（免 CGO，Win/Linux 均可）。V8 依赖 `rogchap.com/v8go`，**仅 Linux/macOS + CGO**；Windows 上请用 goja。注意：当前 `go.mod` 硬依赖 v8go，即使用 goja 也会下载该依赖。
 - **Sync**：`Sync.NewMutex`（`Lock`/`Unlock`/`TryLock`）；`NewRWMutex`（`RLock`/`RUnlock`/`Lock`/`Unlock`/`TryRLock`/`TryLock`）；`NewAtomicInt` / `NewAtomicIntValue`（`Add`/`Sub`/`Get`/`Set`/`CompareAndSwap`）。
-- **Codec**：`URLEncode`/`URLDecode`（query，空格 `%20`）；`Base64Encode`/`Base64Decode`；`Base64URLEncode`/`Base64URLDecode`（RawURL）；`HexEncode`/`HexDecode`（小写）；`IsUTF8`；`ToGBK`/`FromGBK`（返回 `error`）。解码失败返回空串。
+- **Codec**：`URLEncode`/`URLDecode`（query，空格 `%20`）；`QueryParam(url, key)` 取查询参数；`Base64Encode`/`Base64Decode`；`Base64URLEncode`/`Base64URLDecode`（RawURL）；`HexEncode`/`HexDecode`（小写）；`IsUTF8`；`ToGBK`/`FromGBK`（返回 `error`）。解码/取值失败返回空串。
 - 命名空间对象一般不保存可变全局状态（`IP.LoadDB` / `LoadDefaultDB`、`Proxy`/`Thread`/`HTTP`/`JS`/`Sync` 实例除外）。
 - **打印输出**：`Debug`/`Info`/`Warn`/`Error`/`DPanic`/`Panic`/`Fatal` 及 `Debugf`/`Infof`/…（zap 彩色，自动初始化，带行号，时间 `yyyy-mm-dd hh:mm:ss.SSS`）。不要用 `fmt.Print`。
 
