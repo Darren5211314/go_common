@@ -31,12 +31,20 @@ func (FileNS) DirExists(path string) bool {
 	return dirExists(path)
 }
 
+func (FileNS) Mkdir(path string) error {
+	return mkdir(path)
+}
+
+func (FileNS) ExeDir() string {
+	return exeDir()
+}
+
 func (FileNS) Name(path string, withExt bool) string {
 	return getFileName(path, withExt)
 }
 
-func (FileNS) SaveText(path, sep string, content ...string) error {
-	return saveText(path, sep, content...)
+func (FileNS) SaveText(path, sep string, overwrite bool, content ...string) error {
+	return saveText(path, sep, overwrite, content...)
 }
 
 func (FileNS) Size(path, unit string) (float64, error) {

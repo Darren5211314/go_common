@@ -56,7 +56,7 @@ func main() {
 - 时间输出格式只用通配符：`yyyy-mm-dd hh:mm:ss`。
 - `FormatUnix` 自动识别 10/13 位；`ParseUnix(文本, 取十位)` / `Format(文本, 目标格式)` **自动识别输入**，不必传原格式；空文本格式化=现行时间。
 - `Sleep(毫秒)`：阻塞当前协程；`<=0` 立即返回。
-- **File**：`Size(路径, 单位)`（B/KB/MB/GB/TB，1024 进制）；`Delete` / `Trash`（Windows + Linux Trash）；`Move` / `Copy` / `Rename`；`Ext`（含点）；`Exists` / `DirExists`；`Name(路径, 带扩展名)`；`SaveText(路径, 分隔符, ...内容)`（空分隔符默认 `----`，自动建父目录并覆盖）。
+- **File**：`Size(路径, 单位)`（B/KB/MB/GB/TB，1024 进制）；`Delete` / `Trash`（Windows + Linux Trash）；`Move` / `Copy` / `Rename`；`Ext`（含点）；`Exists` / `DirExists`；`Mkdir(路径)`；`ExeDir()`；`Name(路径, 带扩展名)`；`SaveText(路径, 分隔符, 覆盖, ...内容)`（空分隔符默认 `----`，自动建父目录；`覆盖=false` 追加，`true` 覆盖）。
 - **加解密**：模式写进方法名（`EncryptCBC` / `EncryptECB` / `EncryptGCM`）；密钥、IV/nonce、data、摘要均为十六进制字符串；CBC/ECB 用 PKCS7；GCM 返回「data||tag」hex，nonce 单独传。国密：`Hash.SM3`、`SM4`（128-bit 密钥，CBC/ECB/GCM）；依赖 `github.com/emmansun/gmsm`。
 - **JSON**：路径用点号，数组下标为数字段（`data.user.name`、`data.tags.0`）。取值找不到返回空/`0`/`false`；`SetString`/`SetInt`/… 返回新字符串并自动创建中间节点；`Compact` / `Pretty` 非法返回空串。
 - **QR**：`Generate` 返回 PNG Base64；`GenerateFile` 写 PNG；`ParseFile` / `ParseBase64` 读回文本。边长 `<=0` 默认 256；纠错固定 Medium。依赖 `skip2/go-qrcode`、`makiuchi-d/gozxing`。

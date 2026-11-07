@@ -35,8 +35,9 @@
 // File：Size(路径, 单位) 单位为 B/KB/MB/GB/TB（1024 进制）。
 // Delete 永久删除；Trash 支持 Windows 与 Linux XDG Trash。
 // Move / Copy / Rename；目标父目录自动创建。
-// Ext 含点；Name(路径, 带扩展名)；Exists / DirExists。
-// SaveText(路径, 分隔符, ...内容)：分隔符空则用 "----"；自动建父目录并覆盖写入 UTF-8。
+// Ext 含点；Name(路径, 带扩展名)；Exists / DirExists；Mkdir(路径)；ExeDir()。
+// SaveText(路径, 分隔符, 覆盖, ...内容)：分隔符空则用 "----"；自动建父目录；
+// 覆盖=false 追加（默认语义），true 覆盖；UTF-8。
 //
 // # 日志约定
 //

@@ -123,6 +123,27 @@ func dirExists(path string) bool {
 	return info.IsDir()
 }
 
+// Mkdir 显式创建目录（含多级父目录）；空路径报错。
+func mkdir(path string) error {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return errors.New("路径为空")
+	}
+	return os.MkdirAll(path, 0o755)
+}
+
+// ExeDir 返回可执行文件所在目录；失败返回空串。
+func exeDir() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	if resolved, err := filepath.EvalSymlinks(exe); err == nil {
+		exe = resolved
+	}
+	return filepath.Dir(exe)
+}
+
 // Name 取路径最后一段；带扩展名=false 时去掉扩展名。
 func getFileName(path string, withExt bool) string {
 	name := filepath.Base(path)
